@@ -1,4 +1,10 @@
 // ----- [pages/diary/food_diary_page.dart] 開始 -----
+import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
+import 'dart:math' as math;
+import '../../models/container_analysis.dart';
+
 // 飲食記錄頁面 (Food Diary Page)
 // ====================================================================
 class FoodDiaryPageContent extends StatefulWidget {

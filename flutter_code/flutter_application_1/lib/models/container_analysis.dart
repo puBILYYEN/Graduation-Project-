@@ -1,4 +1,6 @@
-// ===== 【數據模型模組】開始 =====
+// ===== 【數據模型模組】開始 -----
+import 'package:flutter/material.dart';
+
 // ====================================================================
 // RAG 系統數據結構
 // ====================================================================
@@ -199,6 +201,40 @@ class MeasurementResult {
         return '校準比例: ${scale.toStringAsFixed(4)} px/$unit';
     }
   }
+}
+
+// ====================================================================
+// 營養數據模型
+// ====================================================================
+
+/// 營養素數據類別 - 儲存營養素的名稱、百分比和顯示顏色
+class NutrientData {
+  final String name; // 營養素名稱（如：蛋白質、碳水化合物、脂肪等）
+  final double percentage; // 營養素所佔的百分比（0.0-100.0）
+  final Color color; // 在圖表中顯示的顏色
+
+  // 構造函數 - 使用位置參數的簡潔形式初始化營養素數據
+  NutrientData(this.name, this.percentage, this.color);
+}
+
+/// 飲食記錄數據類別 - 儲存單一飲食記錄的完整資訊
+class FoodEntry {
+  final String name; // 食物英文名稱
+  final String chineseName; // 食物中文名稱
+  final String mealType; // 餐點類型（如：早餐、午餐、晚餐、點心）
+  final int calories; // 熱量（大卡/kcal）
+  final List<String> imageUrls; // 食物圖片 URL 列表，支援多張圖片展示
+  final String servingInfo; // 份量資訊（如："150g"、"1杯"、"1份"）
+
+  // 構造函數 - 初始化飲食記錄的所有屬性，所有參數都是必需的
+  FoodEntry({
+    required this.name, // 必填：食物英文名稱
+    required this.chineseName, // 必填：食物中文名稱
+    required this.mealType, // 必填：餐點類型
+    required this.calories, // 必填：熱量值
+    required this.imageUrls, // 必填：圖片 URL 列表（可為空列表）
+    required this.servingInfo, // 必填：份量資訊
+  });
 }
 
 // ===== 【數據模型模組】結束 =====
