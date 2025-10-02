@@ -1,6 +1,41 @@
 // ====================================================================
 // 匯入和應用程式入口點
 // ====================================================================
+/*
+模組化重構建議：
+此檔案目前包含多個功能模組，建議拆分為以下獨立模組：
+
+1. 數據模型模組 (models/)
+   - ContainerAnalysisData, ContainerInfo, MeasurementResults 等數據類別
+
+2. 服務模組 (services/)
+   - ReferenceObjectDatabase (參考物件數據庫服務)
+   - MeasurementCalculator (測量計算服務)
+   - LogManager (日誌管理服務)
+
+3. UI頁面模組 (pages/)
+   - LoginPage (登入頁面)
+   - RegisterPage (註冊頁面)
+   - HomePageContent (首頁內容)
+   - BodyAnalysisPageContent (身體分析頁面)
+   - FoodDiaryPageContent (飲食日記頁面)
+   - CameraScreen (相機螢幕)
+   - NutritionDetailPage (營養詳情頁面)
+
+4. 工具類模組 (utils/)
+   - ImageProcessingResult (圖像處理結果)
+   - CustomPainters (自定義繪製器)
+
+5. 配置模組 (config/)
+   - 應用程式配置和常數
+
+拆分後的好處：
+- 提高代碼可維護性
+- 便於團隊協作開發
+- 降低代碼耦合度
+- 提升代碼復用性
+- 便於單元測試
+*/
 import 'package:flutter/material.dart'; // Flutter Material Design 元件庫
 import 'package:flutter/cupertino.dart'; // Flutter iOS 風格 Cupertino 元件庫
 import 'package:flutter/services.dart'; // Flutter 系統服務（如螢幕方向控制）
@@ -25,6 +60,19 @@ import 'package:firebase_storage/firebase_storage.dart'; // Firebase 儲存
 // ====================================================================
 // RAG 系統數據結構
 // ====================================================================
+/*
+模組化建議：【數據模型模組 - models/container_analysis.dart】
+以下類別可以獨立成為數據模型模組：
+- ContainerAnalysisData: 容器分析數據結構
+- ContainerInfo: 容器信息類別
+- MeasurementResults: 測量結果類別
+- AnalysisMetadata: 分析元數據類別
+- ReferenceObject: 參考物件類別
+- MeasurementPoint: 測量點類別
+- MeasurementResult: 測量結果類別
+
+這些類別專責數據結構定義，無UI依賴，適合獨立模組。
+*/
 
 /// RAG 系統的容器分析數據結構
 class ContainerAnalysisData {
@@ -214,6 +262,21 @@ class MeasurementResult {
 // ====================================================================
 // 參考物體數據庫和服務
 // ====================================================================
+/*
+模組化建議：【服務模組 - services/】
+以下類別可以拆分為獨立的服務模組：
+
+1. services/reference_database.dart
+   - ReferenceObjectDatabase: 參考物件數據庫服務
+
+2. services/measurement_calculator.dart
+   - MeasurementCalculator: 測量計算服務
+
+3. services/log_manager.dart
+   - LogManager: 日誌管理服務
+
+這些服務類別負責業務邏輯處理，獨立性強，適合模組化。
+*/
 
 /// 參考物體數據庫
 class ReferenceObjectDatabase {
@@ -681,6 +744,11 @@ class MyApp extends StatelessWidget {
 // ====================================================================
 // 登入頁面 (Login Page)
 // ====================================================================
+/*
+模組化建議：【頁面模組 - pages/auth/login_page.dart】
+LoginPage 和 _LoginPageState 可以獨立成為登入頁面模組。
+包含用戶認證相關的UI和邏輯，適合放在 pages/auth/ 目錄下。
+*/
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -1104,6 +1172,11 @@ class _LoginPageState extends State<LoginPage> {
 // ====================================================================
 // 註冊頁面 (Register Page)
 // ====================================================================
+/*
+模組化建議：【頁面模組 - pages/auth/register_page.dart】
+RegisterPage 和 _RegisterPageState 可以獨立成為註冊頁面模組。
+與登入頁面相關，同樣適合放在 pages/auth/ 目錄下。
+*/
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -3578,6 +3651,14 @@ class ExampleUsage extends StatelessWidget {
 // ====================================================================
 // 相機頁面 (Camera Screen)
 // ====================================================================
+/*
+模組化建議：【頁面模組 - pages/camera/camera_screen.dart】
+CameraScreen 和 _CameraScreenState 是核心的相機功能模組。
+包含相機控制、拍照、圖像處理等複雜邏輯，適合獨立成為相機模組。
+可能需要額外的子模組：
+- widgets/camera_controls.dart (相機控制元件)
+- utils/image_processing.dart (圖像處理工具)
+*/
 // 相機螢幕頁面 - 提供食物拍攝功能，支援前後鏡頭切換、閃光燈控制和圖庫選取
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -4126,7 +4207,10 @@ class _CameraScreenState extends State<CameraScreen>
       String docId = DateTime.now().millisecondsSinceEpoch.toString();
 
       // 將數據存儲到 'container_measurements' 集合
-      await firestore.collection('container_measurements').doc(docId).set(ragData.toJson());
+      await firestore
+          .collection('container_measurements')
+          .doc(docId)
+          .set(ragData.toJson());
 
       // 顯示成功訊息
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4136,7 +4220,6 @@ class _CameraScreenState extends State<CameraScreen>
           duration: Duration(seconds: 2),
         ),
       );
-
     } catch (e) {
       // 如果 Firebase 保存失敗，顯示錯誤但不中斷流程
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4309,7 +4392,8 @@ class _CameraScreenState extends State<CameraScreen>
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('⚠️ 照片保存失敗: ${result?['errorMessage'] ?? '未知錯誤'}'),
+                  content:
+                      Text('⚠️ 照片保存失敗: ${result?['errorMessage'] ?? '未知錯誤'}'),
                   backgroundColor: Colors.orange,
                   duration: const Duration(seconds: 3),
                 ),
@@ -4670,7 +4754,8 @@ class _CameraScreenState extends State<CameraScreen>
         final imageBytes = await image.readAsBytes();
         final result = await ImageGallerySaver.saveImage(
           imageBytes,
-          name: 'reference_measurement_${DateTime.now().millisecondsSinceEpoch}',
+          name:
+              'reference_measurement_${DateTime.now().millisecondsSinceEpoch}',
           quality: 100,
         );
 
@@ -5905,6 +5990,13 @@ class _CameraScreenState extends State<CameraScreen>
 // ====================================================================
 // 邊緣檢測繪畫器 (Edge Detection Painter)
 // ====================================================================
+/*
+模組化建議：【工具類模組 - widgets/custom_painters.dart】
+自定義繪製器類別可以獨立成為工具模組：
+- EdgeDetectionPainter: 邊緣檢測繪畫器
+- MeasurementPainter: 測量繪圖器
+這些繪製器專責UI繪製邏輯，可復用性高。
+*/
 class EdgeDetectionPainter extends CustomPainter {
   final List<Offset> edges;
 
@@ -6582,11 +6674,10 @@ class ReferenceMeasurementPage extends StatefulWidget {
   final String imagePath;
   final Function(List<MeasurementResult>) onMeasurementComplete;
 
-  const ReferenceMeasurementPage({
-    super.key,
-    required this.imagePath,
-    required this.onMeasurementComplete,
-  });
+  const ReferenceMeasurementPage(
+      {super.key,
+      required this.imagePath,
+      required this.onMeasurementComplete});
 
   @override
   State<ReferenceMeasurementPage> createState() =>
