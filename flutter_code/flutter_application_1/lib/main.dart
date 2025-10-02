@@ -282,6 +282,7 @@ class MeasurementResult {
 這些服務類別負責業務邏輯處理，獨立性強，適合模組化。
 */
 
+// ----- [services/reference_database.dart] 開始 -----
 /// 參考物體數據庫
 class ReferenceObjectDatabase {
   // 常見硬幣尺寸 (台灣)
@@ -373,7 +374,9 @@ class ReferenceObjectDatabase {
     }
   }
 }
+// ----- [services/reference_database.dart] 結束 -----
 
+// ----- [services/measurement_calculator.dart] 開始 -----
 /// 測量計算服務
 class MeasurementCalculator {
   /// 計算兩點之間的距離 (像素)
@@ -430,7 +433,9 @@ enum DevicePhysicalOrientation {
   landscapeLeft, // 左橫螢幕 - 設備逆時針旋轉90度，Home鍵在右側
   landscapeRight, // 右橫螢幕 - 設備順時針旋轉90度，Home鍵在左側
 }
+// ----- [services/measurement_calculator.dart] 結束 -----
 
+// ----- [services/log_manager.dart] 開始 -----
 // 日誌管理器類別 - 採用單例模式管理應用程式的日誌記錄
 class LogManager {
   static LogManager? _instance; // 私有静態變數儲存單例實體
@@ -495,7 +500,9 @@ void logSync(String message) {
   // 異步寫入文件，但不等待完成 - 避免阻塞 UI 繪製
   LogManager.instance.writeLog(message);
 }
+// ----- [services/log_manager.dart] 結束 -----
 
+// ----- [main函數和應用程式入口] 開始 -----
 // 應用程式主要入口函數 - 程式執行的起始點
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // 確保 Flutter 綁定已初始化，必須在使用異步操作前調用
@@ -513,6 +520,7 @@ void main() async {
 
   runApp(const MyApp()); // 啟動 Flutter 應用程式
 }
+// ----- [main函數和應用程式入口] 結束 -----
 
 // ===== 【服務模組】結束 =====
 
