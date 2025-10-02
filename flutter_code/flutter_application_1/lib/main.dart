@@ -263,8 +263,7 @@ class MeasurementResult {
     }
   }
 }
-
-// ===== 【數據模型模組】結束 =====
+// ----- [models/measurement.dart] 結束 -----
 
 // ===== 【服務模組】開始 =====
 // ====================================================================
@@ -674,8 +673,8 @@ class _MainFrameState extends State<MainFrame> {
     );
   }
 }
-// ----- [models/measurement.dart] 結束 -----
 
+// ===== 【數據模型模組】延續 =====
 // ----- [models/nutrition.dart] 開始 -----
 // ====================================================================
 // 數據模型 (Data Models)
@@ -743,6 +742,8 @@ class NutrientData {
 // 應用程式主體 (Main App)
 // ====================================================================
 // ----- [models/nutrition.dart] 結束 -----
+
+// ===== 【數據模型模組】結束 =====
 
 // ====================================================================
 // 主應用程式類別 (Main Application Class)
@@ -3687,6 +3688,7 @@ class ExampleUsage extends StatelessWidget {
     );
   }
 }
+// ----- [pages/diary/food_diary_page.dart] 結束 -----
 
 // ====================================================================
 // 相機頁面 (Camera Screen)
@@ -3699,7 +3701,6 @@ CameraScreen 和 _CameraScreenState 是核心的相機功能模組。
 - widgets/camera_controls.dart (相機控制元件)
 - utils/image_processing.dart (圖像處理工具)
 */
-// ----- [pages/diary/food_diary_page.dart] 結束 -----
 
 // ----- [pages/camera/camera_screen.dart] 開始 -----
 // 相機螢幕頁面 - 提供食物拍攝功能，支援前後鏡頭切換、閃光燈控制和圖庫選取
@@ -6030,11 +6031,12 @@ class _CameraScreenState extends State<CameraScreen>
   }
 }
 
+// ----- [pages/camera/camera_screen.dart] 結束 -----
+
 // ===== 【UI頁面模組】結束 =====
 
 // ===== 【工具類模組】開始 =====
 // ====================================================================
-// ----- [pages/camera/camera_screen.dart] 結束 -----
 
 // ----- [widgets/custom_painters.dart] 開始 -----
 // 邊緣檢測繪畫器 (Edge Detection Painter)
@@ -7762,5 +7764,6 @@ ${_results.asMap().entries.map((entry) {
     );
   }
 }
+// ----- [utils/image_processing.dart] 結束 -----
 
 // ===== 【工具類模組】結束 =====

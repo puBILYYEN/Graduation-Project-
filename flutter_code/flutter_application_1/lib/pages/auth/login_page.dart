@@ -1,4 +1,11 @@
 // ----- [pages/auth/login_page.dart] 開始 -----
+import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../main_frame.dart';
+import './register_page.dart';
+import '../../services/log_manager.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 

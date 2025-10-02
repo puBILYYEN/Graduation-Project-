@@ -1,4 +1,8 @@
 // ----- [services/log_manager.dart] 開始 -----
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
+
 // 日誌管理器類別 - 採用單例模式管理應用程式的日誌記錄
 class LogManager {
   static LogManager? _instance; // 私有静態變數儲存單例實體

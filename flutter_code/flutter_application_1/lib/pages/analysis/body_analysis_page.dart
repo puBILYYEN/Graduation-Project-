@@ -1,6 +1,39 @@
 // ----- [pages/analysis/body_analysis_page.dart] 開始 -----
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../models/container_analysis.dart';
+
 // 身體素質分析頁面 (Body Analysis Page)
 // ====================================================================
+
+// 身體指標數據模型類別 - 儲存和管理使用者的身體健康指標
+class BodyMetrics {
+  final int sleepHours; // 睡眠時長（小時）
+  final double sleepChange; // 睡眠時長變化百分比（正值表示增加，負值表示減少）
+  final int height; // 身高（公分）
+  final double heightChange; // 身高變化百分比（通常為 0，成人身高不會變化）
+  final int weight; // 體重（公斤）
+  final double weightChange; // 體重變化百分比（正值表示增加，負值表示減少）
+  final int heartRate; // 心率（次/分鐘）
+  final double heartRateChange; // 心率變化百分比（正值表示增加，負值表示減少）
+  final String bloodPressure; // 血壓（格式：縮張壓/舟張壓，如 "120/80"）
+  final double bloodPressureChange; // 血壓變化百分比（正值表示增加，負值表示減少）
+
+  // 構造函數 - 初始化所有身體指標數據，所有參數都是必需的
+  BodyMetrics({
+    required this.sleepHours, // 必填：睡眠時長
+    required this.sleepChange, // 必填：睡眠變化率
+    required this.height, // 必填：身高
+    required this.heightChange, // 必填：身高變化率
+    required this.weight, // 必填：體重
+    required this.weightChange, // 必填：體重變化率
+    required this.heartRate, // 必填：心率
+    required this.heartRateChange, // 必填：心率變化率
+    required this.bloodPressure, // 必填：血壓值
+    required this.bloodPressureChange, // 必填：血壓變化率
+  });
+}
+
 class BodyAnalysisPageContent extends StatefulWidget {
   const BodyAnalysisPageContent({super.key});
 

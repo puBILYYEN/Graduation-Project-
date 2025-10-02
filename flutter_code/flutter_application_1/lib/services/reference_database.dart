@@ -1,4 +1,6 @@
 // ----- [services/reference_database.dart] 開始 -----
+import '../models/measurement.dart';
+
 /// 參考物體數據庫
 class ReferenceObjectDatabase {
   // 常見硬幣尺寸 (台灣)

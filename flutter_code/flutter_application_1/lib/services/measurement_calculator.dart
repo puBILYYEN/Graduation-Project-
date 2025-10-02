@@ -1,4 +1,7 @@
 // ----- [services/measurement_calculator.dart] 開始 -----
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
 /// 測量計算服務
 class MeasurementCalculator {
   /// 計算兩點之間的距離 (像素)

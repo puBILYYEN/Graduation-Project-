@@ -1,4 +1,8 @@
 // ----- [pages/auth/register_page.dart] 開始 -----
+import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import './login_page.dart';
+
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
