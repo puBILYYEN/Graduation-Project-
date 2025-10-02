@@ -75,6 +75,7 @@ import 'package:firebase_storage/firebase_storage.dart'; // Firebase 儲存
 這些類別專責數據結構定義，無UI依賴，適合獨立模組。
 */
 
+// ----- [models/container_analysis.dart] 開始 -----
 /// RAG 系統的容器分析數據結構
 class ContainerAnalysisData {
   final String imagePath; // 圖片路徑
@@ -176,6 +177,9 @@ class AnalysisMetadata {
 }
 
 // ====================================================================
+// ----- [models/container_analysis.dart] 結束 -----
+
+// ----- [models/measurement.dart] 開始 -----
 // 參考物體測量相關數據模型和枚舉
 // ====================================================================
 
@@ -670,7 +674,9 @@ class _MainFrameState extends State<MainFrame> {
     );
   }
 }
+// ----- [models/measurement.dart] 結束 -----
 
+// ----- [models/nutrition.dart] 開始 -----
 // ====================================================================
 // 數據模型 (Data Models)
 // ====================================================================
@@ -736,6 +742,8 @@ class NutrientData {
 // ====================================================================
 // 應用程式主體 (Main App)
 // ====================================================================
+// ----- [models/nutrition.dart] 結束 -----
+
 // ====================================================================
 // 主應用程式類別 (Main Application Class)
 // ====================================================================
@@ -767,6 +775,8 @@ class MyApp extends StatelessWidget {
 LoginPage 和 _LoginPageState 可以獨立成為登入頁面模組。
 包含用戶認證相關的UI和邏輯，適合放在 pages/auth/ 目錄下。
 */
+
+// ----- [pages/auth/login_page.dart] 開始 -----
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -1195,6 +1205,9 @@ class _LoginPageState extends State<LoginPage> {
 RegisterPage 和 _RegisterPageState 可以獨立成為註冊頁面模組。
 與登入頁面相關，同樣適合放在 pages/auth/ 目錄下。
 */
+// ----- [pages/auth/login_page.dart] 結束 -----
+
+// ----- [pages/auth/register_page.dart] 開始 -----
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
@@ -1521,6 +1534,9 @@ class _RegisterPageState extends State<RegisterPage> {
 }
 
 // ====================================================================
+// ----- [pages/auth/register_page.dart] 結束 -----
+
+// ----- [pages/home/home_page.dart] 開始 -----
 // 首頁 (Home Page)
 // ====================================================================
 // 首頁內容頁面 - 顯示營養攝取概覽和健康數據摘要
@@ -2071,6 +2087,9 @@ class _HomePageContentState extends State<HomePageContent> {
 }
 
 // ====================================================================
+// ----- [pages/home/home_page.dart] 結束 -----
+
+// ----- [pages/analysis/body_analysis_page.dart] 開始 -----
 // 身體素質分析頁面 (Body Analysis Page)
 // ====================================================================
 class BodyAnalysisPageContent extends StatefulWidget {
@@ -2684,6 +2703,9 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
 }
 
 // ====================================================================
+// ----- [pages/analysis/body_analysis_page.dart] 結束 -----
+
+// ----- [pages/diary/food_diary_page.dart] 開始 -----
 // 飲食記錄頁面 (Food Diary Page)
 // ====================================================================
 class FoodDiaryPageContent extends StatefulWidget {
@@ -3677,6 +3699,9 @@ CameraScreen 和 _CameraScreenState 是核心的相機功能模組。
 - widgets/camera_controls.dart (相機控制元件)
 - utils/image_processing.dart (圖像處理工具)
 */
+// ----- [pages/diary/food_diary_page.dart] 結束 -----
+
+// ----- [pages/camera/camera_screen.dart] 開始 -----
 // 相機螢幕頁面 - 提供食物拍攝功能，支援前後鏡頭切換、閃光燈控制和圖庫選取
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -6009,6 +6034,9 @@ class _CameraScreenState extends State<CameraScreen>
 
 // ===== 【工具類模組】開始 =====
 // ====================================================================
+// ----- [pages/camera/camera_screen.dart] 結束 -----
+
+// ----- [widgets/custom_painters.dart] 開始 -----
 // 邊緣檢測繪畫器 (Edge Detection Painter)
 // ====================================================================
 /*
@@ -7209,7 +7237,9 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
 // ====================================================================
 // 自定義繪圖器 - 用於繪製測量點和線條
 // ====================================================================
+// ----- [widgets/custom_painters.dart] 結束 -----
 
+// ----- [utils/image_processing.dart] 開始 -----
 /// 測量繪圖器
 class MeasurementPainter extends CustomPainter {
   final List<MeasurementPoint> referencePoints;
