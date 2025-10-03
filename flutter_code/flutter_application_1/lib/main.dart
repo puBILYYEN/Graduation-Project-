@@ -2,6 +2,37 @@
 // 匯入和應用程式入口點
 // ====================================================================
 /*
+【Dart 建構函數語法元素說明 - 每個元素都是獨立的官方語法】
+
+⚠️ 重要：以下每個語法元素都是獨立的，不是組合函數！
+
+1. { } 大括號（Named Parameters）：
+   - 官方名稱：Named Parameters
+   - 來源：dart.dev/language/functions
+   - 作用：將參數設為具名參數，可用參數名稱呼叫
+   - 範例：{param1, param2}
+
+2. required 關鍵字：
+   - 官方名稱：required keyword
+   - 來源：dart.dev/language/functions
+   - 作用：標記具名參數為必填，不提供會報錯
+   - 範例：required Widget child
+
+3. this. 語法：
+   - 官方名稱：Initializing Formal Parameters
+   - 來源：dart.dev/language/constructors
+   - 作用：建構函數參數直接賦值給同名實例變數
+   - 範例：this.name 等於 傳統的 MyClass(String name) { this.name = name; }
+
+4. : 初始化列表：
+   - 官方名稱：Initializer Lists
+   - 來源：dart.dev/language/constructors
+   - 作用：在建構函數體執行前初始化變數
+   - 範例：) : variable = value
+
+🔗 這些語法可以組合使用：{required this.name} = 具名參數 + 必填 + 自動賦值
+*/
+/*
 模組化重構建議：
 此檔案目前包含多個功能模組，建議拆分為以下獨立模組：
 
@@ -85,21 +116,28 @@ class ContainerAnalysisData {
   final AnalysisMetadata metadata; // 分析元數據
 
   ContainerAnalysisData({
-    required this.imagePath,
-    required this.timestamp,
-    required this.container,
-    required this.measurements,
-    required this.metadata,
+    // ⚠️ 以下每行包含3個獨立的Dart語法元素：
+    // 1. { } = Named Parameters（具名參數）官方語法，來源：dart.dev/language/functions
+    // 2. required = 必填關鍵字，使具名參數變為必填，來源：dart.dev/language/functions
+    // 3. this.參數名 = Initializing Formal Parameters，自動賦值給實例變數，來源：dart.dev/language/constructors
+
+    required this.imagePath,    // required（必填）+ this.imagePath（自動賦值給imagePath實例變數）
+    required this.timestamp,    // required（必填）+ this.timestamp（自動賦值給timestamp實例變數）
+    required this.container,    // required（必填）+ this.container（自動賦值給container實例變數）
+    required this.measurements, // required（必填）+ this.measurements（自動賦值給measurements實例變數）
+    required this.metadata,     // required（必填）+ this.metadata（自動賦值給metadata實例變數）
   });
 
   /// 轉換為 JSON 格式，適合 RAG 系統使用
   Map<String, dynamic> toJson() {
+    // 將容器分析數據轉換為JSON格式的自定義方法：用於數據序列化和RAG系統整合
+    // 返回值：Map<String, dynamic> 包含所有容器分析資料的JSON映射表
     return {
-      'image_path': imagePath,
-      'timestamp': timestamp,
-      'container': container.toJson(),
-      'measurements': measurements.toJson(),
-      'metadata': metadata.toJson(),
+      'image_path': imagePath,               // 將圖片路徑字串加入JSON，鍵名為'image_path'
+      'timestamp': timestamp,                // 將時間戳記字串加入JSON，鍵名為'timestamp'
+      'container': container.toJson(),       // 呼叫容器物件的toJson()方法，將容器資訊轉為JSON子物件
+      'measurements': measurements.toJson(), // 呼叫測量結果物件的toJson()方法，將測量數據轉為JSON子物件
+      'metadata': metadata.toJson(),         // 呼叫分析元數據物件的toJson()方法，將元數據轉為JSON子物件
     };
   }
 }
@@ -112,18 +150,24 @@ class ContainerInfo {
   final List<String> features; // 特徵描述
 
   ContainerInfo({
-    required this.shape,
-    required this.material,
-    required this.color,
-    required this.features,
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字（dart.dev/language/functions）
+    // 2. this.參數名 = Initializing Formal Parameters（dart.dev/language/constructors）
+
+    required this.shape,    // required（必填）+ this.shape（自動賦值給shape實例變數）
+    required this.material, // required（必填）+ this.material（自動賦值給material實例變數）
+    required this.color,    // required（必填）+ this.color（自動賦值給color實例變數）
+    required this.features, // required（必填）+ this.features（自動賦值給features實例變數）
   });
 
   Map<String, dynamic> toJson() {
+    // 將容器資訊轉換為JSON格式的自定義方法：序列化容器的物理屬性數據
+    // 返回值：Map<String, dynamic> 包含容器形狀、材質、顏色、特徵的JSON映射表
     return {
-      'shape': shape,
-      'material': material,
-      'color': color,
-      'features': features,
+      'shape': shape,         // 將容器形狀字串加入JSON，如'圓柱體'、'立方體'等
+      'material': material,   // 將材質推測字串加入JSON，如'塑膠'、'金屬'等
+      'color': color,         // 將主要顏色字串加入JSON，如'白色'、'透明'等
+      'features': features,   // 將特徵描述字串列表加入JSON，如['有蓋子', '透明', '圓形底部']
     };
   }
 }
@@ -136,18 +180,26 @@ class MeasurementResults {
   final Map<String, double>? dimensions; // 尺寸（長寬高等）
 
   MeasurementResults({
-    required this.volume,
-    required this.confidence,
-    required this.method,
-    this.dimensions,
+    // ⚠️ 混合用法：同時有必填和可選的具名參數
+    // 語法元素說明：
+    // 1. { } = Named Parameters（具名參數）
+    // 2. required = 必填關鍵字（可選，不加則為可選參數）
+    // 3. this.參數名 = Initializing Formal Parameters（自動賦值）
+
+    required this.volume,     // required（必填）+ this.volume（自動賦值）
+    required this.confidence, // required（必填）+ this.confidence（自動賦值）
+    required this.method,     // required（必填）+ this.method（自動賦值）
+    this.dimensions,          // 只有 this.dimensions（自動賦值），沒有required所以為可選參數
   });
 
   Map<String, dynamic> toJson() {
+    // 將測量結果轉換為JSON格式的自定義方法：序列化容積測量的數值和元數據
+    // 返回值：Map<String, dynamic> 包含容積、信心度、方法、尺寸的JSON映射表
     return {
-      'volume_cm3': volume,
-      'confidence': confidence,
-      'method': method,
-      'dimensions': dimensions,
+      'volume_cm3': volume,       // 將容積數值(立方公分)加入JSON，鍵名明確標示單位
+      'confidence': confidence,   // 將測量信心度(0.0-1.0)加入JSON，表示結果可靠程度
+      'method': method,           // 將測量方法字串加入JSON，如'自動檢測'、'參考物體'等
+      'dimensions': dimensions,   // 將尺寸映射表加入JSON，可能為null，包含長寬高等數據
     };
   }
 }
@@ -160,18 +212,24 @@ class AnalysisMetadata {
   final Map<String, dynamic> settings; // 相機設置
 
   AnalysisMetadata({
-    required this.deviceModel,
-    required this.appVersion,
-    required this.processingTime,
-    required this.settings,
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字
+    // 2. this.參數名 = Initializing Formal Parameters（自動賦值）
+
+    required this.deviceModel,    // required（必填）+ this.deviceModel（自動賦值）
+    required this.appVersion,     // required（必填）+ this.appVersion（自動賦值）
+    required this.processingTime, // required（必填）+ this.processingTime（自動賦值）
+    required this.settings,       // required（必填）+ this.settings（自動賦值）
   });
 
   Map<String, dynamic> toJson() {
+    // 將分析元數據轉換為JSON格式的自定義方法：序列化設備和處理過程的技術資訊
+    // 返回值：Map<String, dynamic> 包含設備型號、應用版本、處理時間、相機設定的JSON映射表
     return {
-      'device_model': deviceModel,
-      'app_version': appVersion,
-      'processing_time_seconds': processingTime,
-      'camera_settings': settings,
+      'device_model': deviceModel,              // 將設備型號字串加入JSON，如'iPhone 14'、'Samsung Galaxy'等
+      'app_version': appVersion,                // 將應用程式版本字串加入JSON，如'1.0.0'、'2.1.3'等
+      'processing_time_seconds': processingTime, // 將處理時間(秒)加入JSON，記錄分析所需的時間
+      'camera_settings': settings,              // 將相機設定映射表加入JSON，包含解析度、對焦模式等參數
     };
   }
 }
@@ -214,11 +272,15 @@ class ReferenceObject {
   final String unit;
 
   const ReferenceObject({
-    required this.type,
-    required this.name,
-    required this.width,
-    required this.height,
-    this.unit = 'cm',
+    // ⚠️ 此建構函數展示了3種不同的參數語法：
+    // 1. required this.參數名 = 必填 + 自動賦值
+    // 2. this.參數名 = 預設值 = 可選 + 自動賦值 + 預設值
+
+    required this.type,   // required（必填）+ this.type（自動賦值）
+    required this.name,   // required（必填）+ this.name（自動賦值）
+    required this.width,  // required（必填）+ this.width（自動賦值）
+    required this.height, // required（必填）+ this.height（自動賦值）
+    this.unit = 'cm',     // this.unit（自動賦值）+ = 'cm'（預設值），沒有required所以為可選
   });
 }
 
@@ -229,9 +291,16 @@ class MeasurementPoint {
   final DateTime timestamp;
 
   MeasurementPoint({
-    required this.position,
-    required this.index,
-  }) : timestamp = DateTime.now();
+    // ⚠️ 建構函數參數部分包含3個獨立語法元素：
+    // 1. { } = Named Parameters（具名參數）
+    // 2. required = 必填關鍵字
+    // 3. this.參數名 = Initializing Formal Parameters（自動賦值）
+
+    required this.position, // required（必填）+ this.position（自動賦值給position實例變數）
+    required this.index,    // required（必填）+ this.index（自動賦值給index實例變數）
+  }) : timestamp = DateTime.now(); // ⚠️ 這是第4個獨立語法元素：
+  // : timestamp = DateTime.now() = Initializer List（初始化列表）
+  // 作用：在建構函數體執行前初始化timestamp變數（來源：dart.dev/language/constructors）
 }
 
 /// 測量結果數據
@@ -251,15 +320,18 @@ class MeasurementResult {
   });
 
   String get description {
-    switch (mode) {
+    // Getter 方法（Dart官方語法）：使用 get 關鍵字定義計算屬性
+    // 來源：dart.dev/language/methods （Getters and setters）
+    // 功能：根據測量模式動態生成格式化的測量結果描述
+    switch (mode) { // 根據測量模式返回不同格式的描述文字
       case MeasurementMode.length:
-        return '長度: ${value.toStringAsFixed(2)} $unit';
+        return '長度: ${value.toStringAsFixed(2)} $unit';          // 長度測量結果格式
       case MeasurementMode.area:
-        return '面積: ${value.toStringAsFixed(2)} $unit²';
+        return '面積: ${value.toStringAsFixed(2)} $unit²';         // 面積測量結果格式，添加平方符號
       case MeasurementMode.volume:
-        return '體積: ${value.toStringAsFixed(2)} $unit³';
+        return '體積: ${value.toStringAsFixed(2)} $unit³';         // 體積測量結果格式，添加立方符號
       case MeasurementMode.calibration:
-        return '校準比例: ${scale.toStringAsFixed(4)} px/$unit';
+        return '校準比例: ${scale.toStringAsFixed(4)} px/$unit';   // 校準比例格式，顯示像素比例
     }
   }
 }
@@ -356,24 +428,29 @@ class ReferenceObjectDatabase {
 
   /// 取得所有參考物體
   static List<ReferenceObject> getAllObjects() {
+    // 取得所有參考物體的靜態方法：將所有類別的參考物體合併為單一列表
+    // 返回值：List<ReferenceObject> 包含硬幣、卡片、餐具等所有參考物體的完整列表
     return [
-      ...coins.values,
-      ...cards.values,
-      ...utensils.values,
+      ...coins.values,    // 展開硬幣映射表中的所有值，將硬幣物件加入列表
+      ...cards.values,    // 展開卡片映射表中的所有值，將卡片物件加入列表
+      ...utensils.values, // 展開餐具映射表中的所有值，將餐具物件加入列表
     ];
   }
 
   /// 根據類型取得參考物體
   static List<ReferenceObject> getObjectsByType(ReferenceObjectType type) {
-    switch (type) {
-      case ReferenceObjectType.coin:
-        return coins.values.toList();
-      case ReferenceObjectType.card:
-        return cards.values.toList();
-      case ReferenceObjectType.utensil:
-        return utensils.values.toList();
-      case ReferenceObjectType.custom:
-        return [];
+    // 根據指定類型篩選參考物體的靜態方法：從資料庫中取得特定類別的物體
+    // 參數type：ReferenceObjectType枚舉，指定要篩選的物體類型
+    // 返回值：List<ReferenceObject> 符合指定類型的參考物體列表
+    switch (type) { // 使用switch語句根據類型進行分流處理
+      case ReferenceObjectType.coin:    // 當類型為硬幣時
+        return coins.values.toList();   // 將硬幣映射表的所有值轉換為列表並返回
+      case ReferenceObjectType.card:    // 當類型為卡片時
+        return cards.values.toList();   // 將卡片映射表的所有值轉換為列表並返回
+      case ReferenceObjectType.utensil: // 當類型為餐具時
+        return utensils.values.toList(); // 將餐具映射表的所有值轉換為列表並返回
+      case ReferenceObjectType.custom:  // 當類型為自定義時
+        return [];                      // 返回空列表，表示目前無自定義參考物體
     }
   }
 }
@@ -384,48 +461,72 @@ class ReferenceObjectDatabase {
 class MeasurementCalculator {
   /// 計算兩點之間的距離 (像素)
   static double calculatePixelDistance(Offset point1, Offset point2) {
-    return math.sqrt(math.pow(point2.dx - point1.dx, 2) +
-        math.pow(point2.dy - point1.dy, 2));
+    // 計算兩個二維座標點之間歐氏距離的靜態方法：使用畢達哥拉斯定理
+    // 參數point1：第一個座標點的Offset物件，包含x(dx)和y(dy)座標
+    // 參數point2：第二個座標點的Offset物件，包含x(dx)和y(dy)座標
+    // 返回值：double型別的像素距離值
+    return math.sqrt(math.pow(point2.dx - point1.dx, 2) + // 計算X軸差值的平方
+        math.pow(point2.dy - point1.dy, 2));              // 計算Y軸差值的平方，然後開平方根得到距離
   }
 
   /// 計算比例 (像素/厘米)
   static double calculateScale(
       Offset startPoint, Offset endPoint, double realWorldSize) {
-    double pixelDistance = calculatePixelDistance(startPoint, endPoint);
-    return pixelDistance / realWorldSize;
+    // 計算像素到實際尺寸比例的靜態方法：建立圖像與現實世界的尺度對應關係
+    // 參數startPoint：參考物體起始點的Offset座標
+    // 參數endPoint：參考物體結束點的Offset座標
+    // 參數realWorldSize：參考物體在現實世界中的實際尺寸(公分)
+    // 返回值：double型別的比例係數(像素/公分)，用於後續真實尺寸計算
+    double pixelDistance = calculatePixelDistance(startPoint, endPoint); // 計算參考物體在圖像中的像素距離
+    return pixelDistance / realWorldSize; // 像素距離除以實際尺寸得到比例係數
   }
 
   /// 計算真實世界距離
   static double calculateRealDistance(
       Offset point1, Offset point2, double scale) {
-    double pixelDistance = calculatePixelDistance(point1, point2);
-    return pixelDistance / scale;
+    // 將像素距離轉換為真實世界距離的靜態方法：使用已知比例係數進行單位轉換
+    // 參數point1：要測量的第一個座標點
+    // 參數point2：要測量的第二個座標點
+    // 參數scale：像素與實際尺寸的比例係數(像素/公分)
+    // 返回值：double型別的真實世界距離(公分)
+    double pixelDistance = calculatePixelDistance(point1, point2); // 先計算兩點之間的像素距離
+    return pixelDistance / scale; // 像素距離除以比例係數得到真實世界距離
   }
 
   /// 計算多邊形面積 (使用鞋帶公式)
   static double calculatePolygonArea(List<Offset> points, double scale) {
-    if (points.length < 3) return 0.0;
+    // 使用鞋帶公式計算多邊形面積的靜態方法：適用於任意形狀的多邊形面積計算
+    // 參數points：構成多邊形的頂點座標列表，按順序排列
+    // 參數scale：像素與實際尺寸的比例係數(像素/公分)
+    // 返回值：double型別的真實世界面積(平方公分)
+    if (points.length < 3) return 0.0; // 少於3個點無法構成多邊形，返回0
 
-    double area = 0.0;
-    int n = points.length;
+    double area = 0.0; // 初始化面積累加器
+    int n = points.length; // 取得頂點數量
 
-    for (int i = 0; i < n; i++) {
-      int j = (i + 1) % n;
-      area += points[i].dx * points[j].dy;
-      area -= points[j].dx * points[i].dy;
+    // 實作鞋帶公式 (Shoelace formula)：Σ(xi*yi+1 - xi+1*yi)
+    for (int i = 0; i < n; i++) { // 遍歷所有頂點
+      int j = (i + 1) % n;        // 下一個頂點的索引，使用模運算處理最後一個點回到第一個點
+      area += points[i].dx * points[j].dy; // 加上當前點x座標乘以下一點y座標
+      area -= points[j].dx * points[i].dy; // 減去下一點x座標乘以當前點y座標
     }
 
-    area = area.abs() / 2.0;
-    // 轉換為真實世界面積
-    return area / (scale * scale);
+    area = area.abs() / 2.0; // 取絕對值並除以2得到像素面積
+    // 轉換為真實世界面積：像素面積除以比例係數的平方
+    return area / (scale * scale); // 因為面積是二維的，所以比例係數需要平方
   }
 
   /// 估算體積 (假設為圓柱體或長方體)
   static double estimateVolume(List<Offset> points, double scale,
       {double estimatedHeight = 2.0} // 預設高度 2cm
       ) {
-    double area = calculatePolygonArea(points, scale);
-    return area * estimatedHeight;
+    // 基於底面積估算容器體積的靜態方法：假設容器為規則立體形狀
+    // 參數points：構成底面形狀的頂點座標列表
+    // 參數scale：像素與實際尺寸的比例係數(像素/公分)
+    // 參數estimatedHeight：估算的容器高度(公分)，預設值為2.0公分
+    // 返回值：double型別的估算體積(立方公分)
+    double area = calculatePolygonArea(points, scale); // 先計算底面積(平方公分)
+    return area * estimatedHeight; // 底面積乘以高度得到體積(立方公分)
   }
 }
 
@@ -493,15 +594,20 @@ class LogManager {
 
 // 全局日誌函數 - 提供簡潔的日誌記錄接口
 Future<void> log(String message) async {
-  await LogManager.instance.writeLog(message); // 調用單例的寫入日誌方法
+  // 異步日誌記錄函數：將訊息透過LogManager單例寫入日誌檔案
+  // 參數message：要記錄的日誌訊息內容
+  // 返回值：Future<void>，表示異步操作完成
+  await LogManager.instance.writeLog(message); // 調用單例的寫入日誌方法：透過LogManager的instance單例實體調用writeLog方法執行實際的檔案寫入操作
 }
 
 // 同步日誌函數 - 用於 build 方法等不允許異步操作的同步上下文
 void logSync(String message) {
-  // 只輸出到控制台，不寫入文件以避免同步環境中的異步問題
-  print(message);
-  // 異步寫入文件，但不等待完成 - 避免阻塞 UI 繪製
-  LogManager.instance.writeLog(message);
+  // 同步日誌記錄函數：適用於不允許異步操作的環境（如build方法）
+  // 參數message：要記錄的日誌訊息內容
+  // 返回值：void，同步操作無返回值
+  print(message); // 立即將訊息輸出到控制台，確保即時顯示
+  // 同時觸發異步檔案寫入，但不等待完成以避免阻塞UI執行緒
+  LogManager.instance.writeLog(message); // 呼叫LogManager的writeLog方法進行背景檔案寫入，不等待操作完成
 }
 // ----- [services/log_manager.dart] 結束 -----
 
@@ -693,18 +799,21 @@ class BodyMetrics {
   final String bloodPressure; // 血壓（格式：縮張壓/舟張壓，如 "120/80"）
   final double bloodPressureChange; // 血壓變化百分比（正值表示增加，負值表示減少）
 
-  // 構造函數 - 初始化所有身體指標數據，所有參數都是必需的
+  // 構造函數 - 初始化所有身體指標數據，包含3個獨立的Dart語法元素
   BodyMetrics({
-    required this.sleepHours, // 必填：睡眠時長
-    required this.sleepChange, // 必填：睡眠變化率
-    required this.height, // 必填：身高
-    required this.heightChange, // 必填：身高變化率
-    required this.weight, // 必填：體重
-    required this.weightChange, // 必填：體重變化率
-    required this.heartRate, // 必填：心率
-    required this.heartRateChange, // 必填：心率變化率
-    required this.bloodPressure, // 必填：血壓
-    required this.bloodPressureChange, // 必填：血壓變化率
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字（dart.dev/language/functions）
+    // 2. this.參數名 = Initializing Formal Parameters（dart.dev/language/constructors）
+    required this.sleepHours,        // required（必填）+ this.sleepHours（自動賦值給sleepHours實例變數）
+    required this.sleepChange,       // required（必填）+ this.sleepChange（自動賦值給sleepChange實例變數）
+    required this.height,            // required（必填）+ this.height（自動賦值給height實例變數）
+    required this.heightChange,      // required（必填）+ this.heightChange（自動賦值給heightChange實例變數）
+    required this.weight,            // required（必填）+ this.weight（自動賦值給weight實例變數）
+    required this.weightChange,      // required（必填）+ this.weightChange（自動賦值給weightChange實例變數）
+    required this.heartRate,         // required（必填）+ this.heartRate（自動賦值給heartRate實例變數）
+    required this.heartRateChange,   // required（必填）+ this.heartRateChange（自動賦值給heartRateChange實例變數）
+    required this.bloodPressure,     // required（必填）+ this.bloodPressure（自動賦值給bloodPressure實例變數）
+    required this.bloodPressureChange, // required（必填）+ this.bloodPressureChange（自動賦值給bloodPressureChange實例變數）
   });
 }
 
@@ -717,14 +826,17 @@ class FoodEntry {
   final List<String> imageUrls; // 食物圖片 URL 列表，支援多張圖片展示
   final String servingInfo; // 份量資訊（如："150g"、"1杯"、"1份"）
 
-  // 構造函數 - 初始化飲食記錄的所有屬性，所有參數都是必需的
+  // 構造函數 - 初始化飲食記錄的所有屬性，包含3個獨立的Dart語法元素
   FoodEntry({
-    required this.name, // 必填：食物英文名稱
-    required this.chineseName, // 必填：食物中文名稱
-    required this.mealType, // 必填：餐點類型
-    required this.calories, // 必填：熱量值
-    required this.imageUrls, // 必填：圖片 URL 列表（可為空列表）
-    required this.servingInfo, // 必填：份量資訊
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字（dart.dev/language/functions）
+    // 2. this.參數名 = Initializing Formal Parameters（dart.dev/language/constructors）
+    required this.name,          // required（必填）+ this.name（自動賦值給name實例變數）
+    required this.chineseName,   // required（必填）+ this.chineseName（自動賦值給chineseName實例變數）
+    required this.mealType,      // required（必填）+ this.mealType（自動賦值給mealType實例變數）
+    required this.calories,      // required（必填）+ this.calories（自動賦值給calories實例變數）
+    required this.imageUrls,     // required（必填）+ this.imageUrls（自動賦值給imageUrls實例變數）
+    required this.servingInfo,   // required（必填）+ this.servingInfo（自動賦值給servingInfo實例變數）
   });
 }
 
@@ -3062,8 +3174,11 @@ class _FoodDiaryPageContentState extends State<FoodDiaryPageContent> {
 
   // 獲取星期幾的中文名稱
   String _getWeekday(DateTime date) {
-    const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
-    return '週${weekdays[date.weekday % 7]}';
+    // 將DateTime物件轉換為中文星期表示的自定義方法：用於顯示星期幾
+    // 參數date：要轉換的DateTime物件
+    // 返回值：String型別的中文星期表示，如'週一'、'週二'等
+    const weekdays = ['日', '一', '二', '三', '四', '五', '六']; // 定義中文星期表示的常數陣列
+    return '週${weekdays[date.weekday % 7]}'; // 使用weekday屬性取得星期數(1-7)，模7後作為陣列索引，前綴'週'字
   }
 
   // 選中日期顯示
@@ -3101,10 +3216,12 @@ class _FoodDiaryPageContentState extends State<FoodDiaryPageContent> {
 
   // 獲取該日期的總熱量（示例）
   int _getTotalCalories() {
+    // 計算指定日期總熱量的自定義方法：從飲食記錄中累加該日所有食物的熱量
+    // 返回值：int型別的總熱量數值(大卡)
     final dateKey =
-        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-    final entries = foodEntries[dateKey] ?? [];
-    return entries.fold(0, (sum, entry) => sum + entry.calories);
+        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}'; // 將選定日期格式化為YYYY-MM-DD字串作為查詢鍵值
+    final entries = foodEntries[dateKey] ?? []; // 從飲食記錄映射表中取得該日期的食物清單，若無記錄則使用空列表
+    return entries.fold(0, (sum, entry) => sum + entry.calories); // 使用fold方法累加所有食物條目的熱量，初始值為0
   }
 
   // 飲食記錄列表
@@ -3330,13 +3447,17 @@ class NutritionDetailPage extends StatelessWidget {
   final String? imageUrl;
 
   const NutritionDetailPage({
+    // super.key = StatelessWidget預設的key參數（dart.dev/api/widgets/StatelessWidget）
     super.key,
-    required this.foodName,
-    required this.servingSize,
-    required this.nutritionInfo,
-    required this.ingredients,
-    required this.allergens,
-    this.imageUrl,
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字（dart.dev/language/functions）
+    // 2. this.參數名 = Initializing Formal Parameters（dart.dev/language/constructors）
+    required this.foodName,      // required（必填）+ this.foodName（自動賦值給foodName實例變數）
+    required this.servingSize,   // required（必填）+ this.servingSize（自動賦值給servingSize實例變數）
+    required this.nutritionInfo, // required（必填）+ this.nutritionInfo（自動賦值給nutritionInfo實例變數）
+    required this.ingredients,   // required（必填）+ this.ingredients（自動賦值給ingredients實例變數）
+    required this.allergens,     // required（必填）+ this.allergens（自動賦值給allergens實例變數）
+    this.imageUrl,               // this.imageUrl（自動賦值給imageUrl實例變數，可選參數）
   });
 
   @override
@@ -3635,18 +3756,21 @@ class NutritionInfo {
   final int iron;
 
   NutritionInfo({
-    required this.calories,
-    required this.protein,
-    required this.carbohydrates,
-    required this.fat,
-    required this.fiber,
-    required this.sugar,
-    required this.sodium,
-    required this.cholesterol,
-    required this.vitaminA,
-    required this.vitaminC,
-    required this.calcium,
-    required this.iron,
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字（dart.dev/language/functions）
+    // 2. this.參數名 = Initializing Formal Parameters（dart.dev/language/constructors）
+    required this.calories,       // required（必填）+ this.calories（自動賦值給calories實例變數）
+    required this.protein,        // required（必填）+ this.protein（自動賦值給protein實例變數）
+    required this.carbohydrates,  // required（必填）+ this.carbohydrates（自動賦值給carbohydrates實例變數）
+    required this.fat,            // required（必填）+ this.fat（自動賦值給fat實例變數）
+    required this.fiber,          // required（必填）+ this.fiber（自動賦值給fiber實例變數）
+    required this.sugar,          // required（必填）+ this.sugar（自動賦值給sugar實例變數）
+    required this.sodium,         // required（必填）+ this.sodium（自動賦值給sodium實例變數）
+    required this.cholesterol,    // required（必填）+ this.cholesterol（自動賦值給cholesterol實例變數）
+    required this.vitaminA,       // required（必填）+ this.vitaminA（自動賦值給vitaminA實例變數）
+    required this.vitaminC,       // required（必填）+ this.vitaminC（自動賦值給vitaminC實例變數）
+    required this.calcium,        // required（必填）+ this.calcium（自動賦值給calcium實例變數）
+    required this.iron,           // required（必填）+ this.iron（自動賦值給iron實例變數）
   });
 }
 
@@ -4614,38 +4738,41 @@ class _CameraScreenState extends State<CameraScreen>
 
   /// 執行智慧容積計算 - 自動選擇最適合的測量方式
   Future<void> _performSmartVolumeCalculation(String imagePath) async {
-    await log('開始智慧容積計算分析...');
+    // 執行智慧容積計算的核心異步函數：結合多種測量方法自動選擇最佳結果
+    // 參數imagePath：要分析的圖片檔案路徑
+    // 返回值：Future<void>，異步完成容積計算並更新UI狀態
+    await log('開始智慧容積計算分析...'); // 記錄計算流程開始
 
-    // 方法1: 嘗試自動容積計算
-    double autoVolume = 0.0;
-    bool autoSuccess = false;
+    // 第一種方法：嘗試基於邊緣檢測的自動容積計算
+    double autoVolume = 0.0;   // 初始化自動計算結果變數
+    bool autoSuccess = false;  // 初始化自動計算成功標誌
 
-    try {
-      await log('嘗試方法1: 自動容積計算');
-      await _performAutoVolumeCalculation(imagePath);
-      autoVolume = _calculatedVolume;
-      autoSuccess = _calculatedVolume > 0;
-      await log('自動計算結果: ${_calculatedVolume} cm³, 成功: $autoSuccess');
-    } catch (e) {
-      await log('自動計算失敗: $e');
+    try { // 使用try-catch捕捉自動計算過程中的異常
+      await log('嘗試方法1: 自動容積計算'); // 記錄方法1開始執行
+      await _performAutoVolumeCalculation(imagePath); // 呼叫自動容積計算函數
+      autoVolume = _calculatedVolume;           // 取得計算結果
+      autoSuccess = _calculatedVolume > 0;      // 判斷計算是否成功（容積大於0）
+      await log('自動計算結果: ${_calculatedVolume} cm³, 成功: $autoSuccess'); // 記錄方法1結果
+    } catch (e) { // 捕捉自動計算異常
+      await log('自動計算失敗: $e'); // 記錄異常訊息
     }
 
-    // 方法2: 嘗試參考物體測量
-    double referenceVolume = 0.0;
-    bool referenceSuccess = false;
+    // 第二種方法：嘗試基於參考物體的智慧識別測量
+    double referenceVolume = 0.0;   // 初始化參考物體計算結果變數
+    bool referenceSuccess = false;  // 初始化參考物體計算成功標誌
 
-    try {
-      await log('嘗試方法2: 參考物體智慧識別');
-      referenceVolume = await _performAutomaticReferenceDetection(imagePath);
-      referenceSuccess = referenceVolume > 0;
-      await log('參考物體計算結果: $referenceVolume cm³, 成功: $referenceSuccess');
-    } catch (e) {
-      await log('參考物體計算失敗: $e');
+    try { // 使用try-catch捕捉參考物體計算過程中的異常
+      await log('嘗試方法2: 參考物體智慧識別'); // 記錄方法2開始執行
+      referenceVolume = await _performAutomaticReferenceDetection(imagePath); // 呼叫自動參考物體檢測函數
+      referenceSuccess = referenceVolume > 0;  // 判斷參考物體計算是否成功
+      await log('參考物體計算結果: $referenceVolume cm³, 成功: $referenceSuccess'); // 記錄方法2結果
+    } catch (e) { // 捕捉參考物體計算異常
+      await log('參考物體計算失敗: $e'); // 記錄異常訊息
     }
 
-    // 選擇最佳結果
+    // 智慧選擇最佳測量結果：比較兩種方法的結果並選擇最可靠的
     await _selectBestMeasurementResult(
-        autoVolume, autoSuccess, referenceVolume, referenceSuccess);
+        autoVolume, autoSuccess, referenceVolume, referenceSuccess); // 傳入兩種方法的結果進行智慧選擇
   }
 
   /// 自動參考物體檢測和測量
@@ -4712,39 +4839,45 @@ class _CameraScreenState extends State<CameraScreen>
   /// 選擇最佳測量結果
   Future<void> _selectBestMeasurementResult(double autoVolume, bool autoSuccess,
       double referenceVolume, bool referenceSuccess) async {
-    String selectedMethod = '';
-    double finalVolume = 0.0;
+    // 智慧選擇最佳測量結果的決策函數：根據多種測量方法的成功狀態和結果差異進行最優選擇
+    // 參數autoVolume：自動邊緣檢測計算的容積值
+    // 參數autoSuccess：自動檢測是否成功的布林值
+    // 參數referenceVolume：參考物體測量計算的容積值
+    // 參數referenceSuccess：參考物體測量是否成功的布林值
+    // 返回值：Future<void>，異步完成結果選擇並更新UI
+    String selectedMethod = ''; // 初始化選中的測量方法名稱
+    double finalVolume = 0.0;   // 初始化最終選定的容積值
 
-    if (autoSuccess && referenceSuccess) {
-      // 兩種方法都成功，選擇更可靠的結果
-      final difference = (autoVolume - referenceVolume).abs();
-      final averageVolume = (autoVolume + referenceVolume) / 2;
-      final differencePercentage = difference / averageVolume * 100;
+    if (autoSuccess && referenceSuccess) { // 情況1：兩種測量方法都成功時的智慧選擇邏輯
+      // 計算兩種方法結果的差異程度來決定採用策略
+      final difference = (autoVolume - referenceVolume).abs();        // 計算絕對差值
+      final averageVolume = (autoVolume + referenceVolume) / 2;       // 計算平均容積
+      final differencePercentage = difference / averageVolume * 100;  // 計算差異百分比
 
-      if (differencePercentage < 20) {
-        // 結果相近，取平均值
-        finalVolume = averageVolume;
-        selectedMethod = '混合測量（自動+參考）';
-        await log('兩種方法結果相近，使用平均值: ${finalVolume.toStringAsFixed(2)} cm³');
-      } else {
-        // 結果差異較大，選擇參考物體測量（通常更準確）
-        finalVolume = referenceVolume;
-        selectedMethod = '參考物體測量';
-        await log('選擇參考物體測量結果: ${finalVolume.toStringAsFixed(2)} cm³');
+      if (differencePercentage < 20) { // 當兩種方法結果差異小於20%時
+        // 結果相近表示測量可靠，取兩者平均值提升準確度
+        finalVolume = averageVolume;                   // 使用平均值作為最終結果
+        selectedMethod = '混合測量（自動+參考）';        // 標記為混合測量方法
+        await log('兩種方法結果相近，使用平均值: ${finalVolume.toStringAsFixed(2)} cm³'); // 記錄選擇邏輯
+      } else { // 當兩種方法結果差異大於20%時
+        // 結果差異較大時，偏好參考物體測量因為通常更準確
+        finalVolume = referenceVolume;        // 採用參考物體測量結果
+        selectedMethod = '參考物體測量';       // 標記為參考物體測量方法
+        await log('選擇參考物體測量結果: ${finalVolume.toStringAsFixed(2)} cm³'); // 記錄選擇邏輯
       }
-    } else if (autoSuccess) {
-      finalVolume = autoVolume;
-      selectedMethod = '自動容積測量';
-      await log('使用自動測量結果: ${finalVolume.toStringAsFixed(2)} cm³');
-    } else if (referenceSuccess) {
-      finalVolume = referenceVolume;
-      selectedMethod = '參考物體測量';
-      await log('使用參考物體測量結果: ${finalVolume.toStringAsFixed(2)} cm³');
-    } else {
-      // 都失敗，使用預設值
-      finalVolume = 1000.0;
-      selectedMethod = '估算值';
-      await log('兩種測量都失敗，使用估算值: ${finalVolume.toStringAsFixed(2)} cm³');
+    } else if (autoSuccess) { // 情況2：僅自動檢測成功時
+      finalVolume = autoVolume;          // 使用自動檢測結果
+      selectedMethod = '自動容積測量';    // 標記為自動測量方法
+      await log('使用自動測量結果: ${finalVolume.toStringAsFixed(2)} cm³'); // 記錄選擇邏輯
+    } else if (referenceSuccess) { // 情況3：僅參考物體測量成功時
+      finalVolume = referenceVolume;     // 使用參考物體測量結果
+      selectedMethod = '參考物體測量';    // 標記為參考物體測量方法
+      await log('使用參考物體測量結果: ${finalVolume.toStringAsFixed(2)} cm³'); // 記錄選擇邏輯
+    } else { // 情況4：兩種測量都失敗時的降級處理
+      // 提供合理的預設估算值避免系統無法運作
+      finalVolume = 1000.0;             // 使用1000cm³作為預設估算值
+      selectedMethod = '估算值';         // 標記為估算方法
+      await log('兩種測量都失敗，使用估算值: ${finalVolume.toStringAsFixed(2)} cm³'); // 記錄降級邏輯
     }
 
     // 更新UI顯示結果
@@ -4972,22 +5105,25 @@ class _CameraScreenState extends State<CameraScreen>
 
   /// 根據尺寸計算容積
   double _calculateVolumeFromDimensions(Map<String, double> dimensions) {
-    switch (_containerShape) {
-      case '長方體':
-        return dimensions['length']! *
-            dimensions['width']! *
-            dimensions['height']!;
+    // 根據容器形狀和尺寸參數計算容積的自定義函數
+    // 參數dimensions：包含長度、寬度、高度等尺寸資料的Map集合
+    // 返回值：double型別的容積值（立方公分）
+    switch (_containerShape) { // 根據事先偵測到的容器形狀進行不同的計算方式
+      case '長方體': // 長方體容積 = 長 × 寬 × 高
+        return dimensions['length']! * // 取得長度值（!表示確定不為null）
+            dimensions['width']! *     // 取得寬度值
+            dimensions['height']!;     // 取得高度值，三者相乘得出容積
 
-      case '圓柱體':
-        double radius = dimensions['length']! / 2; // 假設直徑是檢測寬度
-        return math.pi * radius * radius * dimensions['height']!;
+      case '圓柱體': // 圓柱體容積 = π × 半徑² × 高
+        double radius = dimensions['length']! / 2; // 將偵測到的長度除以2作為半徑（假設length為直徑）
+        return math.pi * radius * radius * dimensions['height']!; // π × r² × h 的圓柱體容積公式
 
-      case '立方體':
-        double side = (dimensions['length']! + dimensions['width']!) / 2; // 平均值
-        return side * side * side;
+      case '立方體': // 立方體容積 = 邊長³
+        double side = (dimensions['length']! + dimensions['width']!) / 2; // 取長寬的平均值作為邊長
+        return side * side * side; // 邊長的三次方得出立方體容積
 
-      default:
-        return 0.0;
+      default: // 未知形狀或無法計算的情況
+        return 0.0; // 返回0作為預設值
     }
   }
 
@@ -5199,100 +5335,113 @@ class _CameraScreenState extends State<CameraScreen>
 
   /// 自動辨識容器形狀
   String _detectContainerShape(List<Offset> edges) {
-    if (edges.isEmpty) {
-      return '未知形狀';
+    // 容器形狀自動偵測函數：根據邊緣點分析容器的幾何形狀
+    // 參數edges：包含容器邊緣座標點的列表
+    // 返回值：String型別的形狀名稱（立方體、長方體、圓柱體、未知形狀）
+    if (edges.isEmpty) { // 檢查邊緣點列表是否為空
+      return '未知形狀'; // 沒有邊緣點時返回未知形狀
     }
 
-    print('開始自動辨識容器形狀，邊緣點數: ${edges.length}');
+    print('開始自動辨識容器形狀，邊緣點數: ${edges.length}'); // 輸出偵測開始訊息和邊緣點數量
 
-    // 基於邊緣點數量和形狀特徵判斷容器類型
-    if (edges.length >= 8) {
-      // 多邊緣點，可能是長方體
-      final aspectRatio = _calculateAspectRatio(edges);
+    // 基於邊緣點數量和形狀特徵進行容器類型判斷的演算法
+    if (edges.length >= 8) { // 當邊緣點數量大於等於8個時
+      // 多邊緣點通常表示矩形或方形容器，需要計算長寬比來區分
+      final aspectRatio = _calculateAspectRatio(edges); // 呼叫自定義函數計算長寬比
 
-      if (aspectRatio > 0.8 && aspectRatio < 1.2) {
-        print('辨識為: 立方體 (長寬比: ${aspectRatio.toStringAsFixed(2)})');
-        return '立方體';
-      } else {
-        print('辨識為: 長方體 (長寬比: ${aspectRatio.toStringAsFixed(2)})');
-        return '長方體';
+      if (aspectRatio > 0.8 && aspectRatio < 1.2) { // 長寬比接近1（0.8-1.2之間）表示接近正方形
+        print('辨識為: 立方體 (長寬比: ${aspectRatio.toStringAsFixed(2)})'); // 輸出辨識結果和長寬比數值
+        return '立方體'; // 返回立方體形狀
+      } else { // 長寬比差異較大表示為長方形
+        print('辨識為: 長方體 (長寬比: ${aspectRatio.toStringAsFixed(2)})'); // 輸出辨識結果和長寬比數值
+        return '長方體'; // 返回長方體形狀
       }
-    } else if (edges.length >= 4) {
-      // 中等邊緣點，檢查是否為圓形特徵
-      final roundness = _calculateRoundness(edges);
+    } else if (edges.length >= 4) { // 當邊緣點數量在4-7個之間時
+      // 中等數量的邊緣點，需要檢查圓形特徵來判斷是否為圓柱體
+      final roundness = _calculateRoundness(edges); // 呼叫自定義函數計算圓度值
 
-      if (roundness > 0.7) {
-        print('辨識為: 圓柱體 (圓度: ${roundness.toStringAsFixed(2)})');
-        return '圓柱體';
-      } else {
-        print('辨識為: 長方體 (圓度: ${roundness.toStringAsFixed(2)})');
-        return '長方體';
+      if (roundness > 0.7) { // 圓度值大於0.7表示接近圓形
+        print('辨識為: 圓柱體 (圓度: ${roundness.toStringAsFixed(2)})'); // 輸出辨識結果和圓度數值
+        return '圓柱體'; // 返回圓柱體形狀
+      } else { // 圓度值較低表示仍為矩形特徵
+        print('辨識為: 長方體 (圓度: ${roundness.toStringAsFixed(2)})'); // 輸出辨識結果和圓度數值
+        return '長方體'; // 返回長方體形狀
       }
-    } else {
-      print('邊緣點太少，預設為: 長方體');
-      return '長方體';
+    } else { // 當邊緣點數量少於4個時
+      print('邊緣點太少，預設為: 長方體'); // 輸出邊緣點不足的警告訊息
+      return '長方體'; // 預設返回長方體形狀
     }
   }
 
   /// 計算容器長寬比
   double _calculateAspectRatio(List<Offset> edges) {
-    if (edges.isEmpty) return 1.0;
+    // 計算容器長寬比的自定義函數：分析邊緣點座標來確定容器的寬高比例
+    // 參數edges：包含容器邊緣座標點的列表
+    // 返回值：double型別的長寬比值（寬度除以高度）
+    if (edges.isEmpty) return 1.0; // 如果沒有邊緣點，返回1.0表示正方形比例
 
-    double minX = edges.first.dx;
-    double maxX = edges.first.dx;
-    double minY = edges.first.dy;
-    double maxY = edges.first.dy;
+    // 初始化邊界值：使用第一個點的座標作為初始的最小值和最大值
+    double minX = edges.first.dx; // 初始化X軸最小值（最左邊）
+    double maxX = edges.first.dx; // 初始化X軸最大值（最右邊）
+    double minY = edges.first.dy; // 初始化Y軸最小值（最上方）
+    double maxY = edges.first.dy; // 初始化Y軸最大值（最下方）
 
-    for (final edge in edges) {
-      minX = math.min(minX, edge.dx);
-      maxX = math.max(maxX, edge.dx);
-      minY = math.min(minY, edge.dy);
-      maxY = math.max(maxY, edge.dy);
+    // 遍歷所有邊緣點找出邊界框的四個極值
+    for (final edge in edges) { // 逐一檢查每個邊緣點座標
+      minX = math.min(minX, edge.dx); // 更新X軸最小值（找出最左邊的點）
+      maxX = math.max(maxX, edge.dx); // 更新X軸最大值（找出最右邊的點）
+      minY = math.min(minY, edge.dy); // 更新Y軸最小值（找出最上方的點）
+      maxY = math.max(maxY, edge.dy); // 更新Y軸最大值（找出最下方的點）
     }
 
-    final width = maxX - minX;
-    final height = maxY - minY;
+    // 計算邊界框的寬度和高度
+    final width = maxX - minX;   // 寬度 = 最右邊X座標 - 最左邊X座標
+    final height = maxY - minY;  // 高度 = 最下方Y座標 - 最上方Y座標
 
-    if (height == 0) return 1.0;
-    return width / height;
+    if (height == 0) return 1.0; // 防止除以零的錯誤，高度為0時返回1.0
+    return width / height;       // 返回長寬比：寬度除以高度
   }
 
   /// 計算容器圓度（判斷是否為圓形）
   double _calculateRoundness(List<Offset> edges) {
-    if (edges.length < 3) return 0.0;
+    // 計算容器圓度的自定義函數：透過統計分析判斷邊緣點是否形成圓形
+    // 參數edges：包含容器邊緣座標點的列表
+    // 返回值：double型別的圓度值（0.0-1.0，越接近1.0越圓）
+    if (edges.length < 3) return 0.0; // 少於3個點無法形成有效形狀，返回0.0
 
-    // 計算邊緣點的質心
-    double centerX = 0;
-    double centerY = 0;
-    for (final edge in edges) {
-      centerX += edge.dx;
-      centerY += edge.dy;
+    // 第一步：計算所有邊緣點的質心（幾何中心點）
+    double centerX = 0; // 初始化X軸質心累加器
+    double centerY = 0; // 初始化Y軸質心累加器
+    for (final edge in edges) { // 遍歷所有邊緣點
+      centerX += edge.dx; // 累加所有點的X座標
+      centerY += edge.dy; // 累加所有點的Y座標
     }
-    centerX /= edges.length;
-    centerY /= edges.length;
+    centerX /= edges.length; // 計算X軸質心：總和除以點數
+    centerY /= edges.length; // 計算Y軸質心：總和除以點數
 
-    final center = Offset(centerX, centerY);
+    final center = Offset(centerX, centerY); // 建立質心座標物件
 
-    // 計算所有點到質心的距離
+    // 第二步：計算所有邊緣點到質心的歐氏距離
     final distances = edges
-        .map((edge) => math.sqrt(
-            math.pow(edge.dx - centerX, 2) + math.pow(edge.dy - centerY, 2)))
-        .toList();
+        .map((edge) => math.sqrt( // 使用歐氏距離公式：√((x2-x1)² + (y2-y1)²)
+            math.pow(edge.dx - centerX, 2) + math.pow(edge.dy - centerY, 2))) // 計算每個點到質心的距離
+        .toList(); // 轉換為距離列表
 
-    if (distances.isEmpty) return 0.0;
+    if (distances.isEmpty) return 0.0; // 防禦性程式設計：確保距離列表不為空
 
-    // 計算距離的標準差
-    final meanDistance = distances.reduce((a, b) => a + b) / distances.length;
+    // 第三步：計算距離的統計特徵（平均值和標準差）
+    final meanDistance = distances.reduce((a, b) => a + b) / distances.length; // 計算平均距離：所有距離的總和除以數量
     final variance = distances
-            .map((distance) => math.pow(distance - meanDistance, 2))
-            .reduce((a, b) => a + b) /
-        distances.length;
-    final standardDeviation = math.sqrt(variance);
+            .map((distance) => math.pow(distance - meanDistance, 2)) // 計算每個距離與平均距離的差的平方
+            .reduce((a, b) => a + b) / // 累加所有平方差
+        distances.length; // 除以數量得到變異數
+    final standardDeviation = math.sqrt(variance); // 計算標準差：變異數的平方根
 
-    // 圓度 = 1 - (標準差 / 平均距離)
-    // 越接近1表示越圓
-    final roundness = 1 - (standardDeviation / meanDistance);
-    return math.max(0.0, roundness);
+    // 第四步：計算圓度指標
+    // 圓度公式：1 - (標準差 / 平均距離)
+    // 理論基礎：圓形的所有邊緣點到中心距離相等，標準差接近0，圓度接近1
+    final roundness = 1 - (standardDeviation / meanDistance); // 計算圓度值
+    return math.max(0.0, roundness); // 確保圓度值不小於0.0
   }
 
   /// 顯示尺寸輸入對話框
@@ -6336,19 +6485,22 @@ class _FoodPhotoSelectorState extends State<FoodPhotoSelector> {
   }
 
   Color _getBackgroundColor(int index) {
-    final colors = [
-      const Color(0xFFF5E6D3), // 米色
-      const Color(0xFFD3E5E3), // 浅绿色
-      const Color(0xFFF0F0F0), // 浅灰色
-      const Color(0xFFD3E5E3), // 浅绿色
-      const Color(0xFFD3E5E3), // 浅绿色
-      const Color(0xFFD3E5E3), // 浅绿色
-      const Color(0xFF8BA3A3), // 深绿色
-      const Color(0xFFD3E5E3), // 浅绿色
-      const Color(0xFFD3E5E3), // 浅绿色
-      const Color(0xFFD3E5E3), // 浅绿色
+    // 根據索引取得循環背景顏色的自定義方法：為UI元件提供多樣化的背景色彩
+    // 參數index：元件的索引值，用於決定使用哪個顏色
+    // 返回值：Color物件，對應索引的背景顏色
+    final colors = [ // 定義顏色清單，包含10種不同的柔和色調
+      const Color(0xFFF5E6D3), // 米色 - 溫暖的淺棕色調
+      const Color(0xFFD3E5E3), // 浅绿色 - 清新的淺綠色調
+      const Color(0xFFF0F0F0), // 浅灰色 - 中性的淺灰色調
+      const Color(0xFFD3E5E3), // 浅绿色 - 重複使用以增加綠色出現頻率
+      const Color(0xFFD3E5E3), // 浅绿色 - 保持一致的視覺風格
+      const Color(0xFFD3E5E3), // 浅绿色 - 營造和諧的色彩搭配
+      const Color(0xFF8BA3A3), // 深绿色 - 較深的綠色作為對比
+      const Color(0xFFD3E5E3), // 浅绿色 - 回到主色調
+      const Color(0xFFD3E5E3), // 浅绿色 - 保持統一性
+      const Color(0xFFD3E5E3), // 浅绿色 - 結束於主色調
     ];
-    return colors[index % colors.length];
+    return colors[index % colors.length]; // 使用模運算實現顏色循環，確保索引不會超出陣列範圍
   }
 
   Widget _buildFoodPlaceholder(int index) {
@@ -6383,9 +6535,12 @@ class FoodItem {
   final String description;
 
   FoodItem({
-    required this.id,
-    required this.imagePath,
-    required this.description,
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字（dart.dev/language/functions）
+    // 2. this.參數名 = Initializing Formal Parameters（dart.dev/language/constructors）
+    required this.id,            // required（必填）+ this.id（自動賦值給id實例變數）
+    required this.imagePath,     // required（必填）+ this.imagePath（自動賦值給imagePath實例變數）
+    required this.description,   // required（必填）+ this.description（自動賦值給description實例變數）
   });
 }
 
@@ -6618,22 +6773,24 @@ class NutritionLabelScreen extends StatelessWidget {
   }
 
   List<Widget> buildFoodCategoryList() {
-    final categories = [
-      {'icon': Icons.grain, 'title': '全穀類', 'subtitle': '精製麵粉'},
-      {'icon': Icons.eco, 'title': '豆魚蛋肉類', 'subtitle': '蛋豆'},
-      {'icon': Icons.local_drink, 'title': '乳品類', 'subtitle': '牛奶'},
-      {'icon': Icons.park, 'title': '蔬菜類', 'subtitle': '蔬菜'},
-      {'icon': Icons.apple, 'title': '水果類', 'subtitle': '水果'},
-      {'icon': Icons.opacity, 'title': '油脂與堅果種子類', 'subtitle': '油脂'},
+    // 建立食物六大類清單的自定義方法：產生營養標籤中的食物分類UI元件
+    // 返回值：List<Widget> 包含所有食物分類卡片的Widget清單
+    final categories = [ // 定義六大類食物的資料結構，每項包含圖示、標題、副標題
+      {'icon': Icons.grain, 'title': '全穀類', 'subtitle': '精製麵粉'},              // 全穀類食物，使用穀物圖示
+      {'icon': Icons.eco, 'title': '豆魚蛋肉類', 'subtitle': '蛋豆'},               // 蛋白質類食物，使用生態圖示
+      {'icon': Icons.local_drink, 'title': '乳品類', 'subtitle': '牛奶'},          // 乳製品類食物，使用飲品圖示
+      {'icon': Icons.park, 'title': '蔬菜類', 'subtitle': '蔬菜'},                // 蔬菜類食物，使用公園圖示
+      {'icon': Icons.apple, 'title': '水果類', 'subtitle': '水果'},                // 水果類食物，使用蘋果圖示
+      {'icon': Icons.opacity, 'title': '油脂與堅果種子類', 'subtitle': '油脂'},      // 油脂類食物，使用液滴圖示
     ];
 
-    return categories.map((category) {
-      return Container(
-        margin: EdgeInsets.only(bottom: 12),
-        padding: EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(8),
+    return categories.map((category) { // 使用map方法將每個食物分類資料轉換為Container Widget
+      return Container( // 為每個食物分類建立容器Widget
+        margin: EdgeInsets.only(bottom: 12),  // 設定下方間距12像素，分隔不同分類
+        padding: EdgeInsets.all(12),          // 設定內部填充12像素，提供內容與邊框的空間
+        decoration: BoxDecoration(            // 設定容器的視覺裝飾
+          color: Colors.grey[50],             // 設定淺灰色背景，提供視覺層次
+          borderRadius: BorderRadius.circular(8), // 設定圓角半徑8像素，創造圓潤外觀
         ),
         child: Row(
           children: [
@@ -6659,25 +6816,27 @@ class NutritionLabelScreen extends StatelessWidget {
   }
 
   Widget buildNutritionGrid() {
-    final nutritionData = [
-      {'label': '蛋白質', 'value': '15克'},
-      {'label': '碳水化合物', 'value': '30克'},
-      {'label': '脂肪', 'value': '10克'},
-      {'label': '膳食纖維', 'value': '5克'},
-      {'label': '糖', 'value': '8克'},
-      {'label': '鈉', 'value': '200毫克'},
-      {'label': '膽固醇', 'value': '50毫克'},
-      {'label': '鈣', 'value': '10毫克'},
+    // 建立營養素網格顯示的自定義方法：產生2x4網格佈局的營養成分資訊
+    // 返回值：Widget型別的GridView，顯示各種營養素的含量資訊
+    final nutritionData = [ // 定義營養素資料陣列，包含標籤和數值
+      {'label': '蛋白質', 'value': '15克'},         // 蛋白質含量資訊
+      {'label': '碳水化合物', 'value': '30克'},      // 碳水化合物含量資訊
+      {'label': '脂肪', 'value': '10克'},          // 脂肪含量資訊
+      {'label': '膳食纖維', 'value': '5克'},        // 膳食纖維含量資訊
+      {'label': '糖', 'value': '8克'},            // 糖分含量資訊
+      {'label': '鈉', 'value': '200毫克'},         // 鈉含量資訊
+      {'label': '膽固醇', 'value': '50毫克'},       // 膽固醇含量資訊
+      {'label': '鈣', 'value': '10毫克'},          // 鈣質含量資訊
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 2.5,
+    return GridView.builder( // 建立可建構的網格視圖Widget
+      shrinkWrap: true,                    // 設定為true使GridView適應內容高度，不無限擴展
+      physics: NeverScrollableScrollPhysics(), // 禁用滾動物理效果，讓父級ScrollView處理滾動
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount( // 設定網格佈局代理
+        crossAxisCount: 2,       // 設定每行顯示2個項目
+        crossAxisSpacing: 12,    // 設定列間距為12像素
+        mainAxisSpacing: 12,     // 設定行間距為12像素
+        childAspectRatio: 2.5,   // 設定子項目寬高比為2.5:1，創造較寬的矩形
       ),
       itemCount: nutritionData.length,
       itemBuilder: (context, index) {
@@ -7382,10 +7541,10 @@ class ImageProcessingResult {
     required this.processedAt,
   });
 
-  String get displayName =>
-      'IMG_${processedAt.millisecondsSinceEpoch % 100000}';
-  String get volumeText => '${volume.toStringAsFixed(2)} cm³';
-  String get literText => '${(volume / 1000).toStringAsFixed(3)} L';
+  String get displayName => // Getter（計算屬性）：生成簡化的圖片顯示名稱
+      'IMG_${processedAt.millisecondsSinceEpoch % 100000}'; // 使用時間戳記後5位數字作為圖片ID
+  String get volumeText => '${volume.toStringAsFixed(2)} cm³'; // Getter：格式化容積文字為立方公分單位
+  String get literText => '${(volume / 1000).toStringAsFixed(3)} L'; // Getter：將容積轉換為公升單位並格式化
 }
 
 class MultiImageProcessingScreen extends StatefulWidget {
