@@ -1,15 +1,9 @@
 // ----- [pages/home/home_page.dart] 開始 -----
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:async';
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import '../../models/nutrient_data.dart';
 import '../auth/login_page.dart';
-import '../../models/container_analysis.dart';
 
-// 首頁 (Home Page)
-// ====================================================================
-// 首頁內容頁面 - 顯示營養攝取概覽和健康數據摘要
 class HomePageContent extends StatefulWidget {
   const HomePageContent({super.key});
 

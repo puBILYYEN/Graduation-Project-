@@ -1,3 +1,28 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';
+import 'package:path/path.dart' as path;
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'widgets/camera_controls.dart';
+import 'utils/edge_detection_painter.dart';
+import '../nutrition/nutrition_label_screen.dart';
+import '../multi_image/multi_image_processing_screen.dart';
+import 'widgets/reference_measurement_page.dart';
+import '../../models/reference_object.dart';
+import '../../models/container_analysis.dart';
+import '../../models/measurement.dart';
+import '../../widgets/custom_painters.dart';
+import '../../utils/logger.dart';
+import 'dart:async';
+import 'dart:math' as math;
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 // ====================================================================
 // 相機頁面 (Camera Screen)
 // ====================================================================
@@ -380,7 +405,7 @@ class _CameraScreenState extends State<CameraScreen>
       timestamp: DateTime.now().toIso8601String(),
       container: ContainerInfo(
         shape: '圓柱體',
-        material: '塑膠',
+        material: '塑膡',
         color: '透明',
         features: ['密封蓋', '測量刻度', '防滑底部'],
       ),
@@ -1337,7 +1362,7 @@ class _CameraScreenState extends State<CameraScreen>
                             color: Colors.green)),
                     SizedBox(height: 5),
                     Text('${_calculatedVolume.toStringAsFixed(2)} cm³',
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 24, fontWeight: FontWeight.bold)),
                     Text(
                         '= ${(_calculatedVolume / 1000).toStringAsFixed(3)} 公升',
@@ -1359,7 +1384,7 @@ class _CameraScreenState extends State<CameraScreen>
                 _clearVolumeData(); // 重新測量
               },
               child: Text('重新測量'),
-            ),
+            },
           ],
         );
       },
@@ -1725,7 +1750,7 @@ class _CameraScreenState extends State<CameraScreen>
                 },
                 onSelectFromGallery: () async {
                   Navigator.of(context).pop(); // 先關閉營養標籤頁面
-                  await _openGallery(); // 重新選擇相簿圖片
+                  await _selectImageFromGallery(); // 選擇相簿圖片
                 },
               ),
             ),
@@ -2337,6 +2362,30 @@ class _CameraScreenState extends State<CameraScreen>
       ),
     );
   }
+
+  // 修正參考測量頁面 placeholder
+  Widget ReferenceMeasurementPage({
+    required String imagePath,
+    required Function(List<MeasurementResult>) onMeasurementComplete,
+  }) {
+    // 臨時實現，後續需要建立完整的參考測量頁面
+    return Scaffold(
+      body: Center(
+        child: Text('參考測量頁面開發中...'),
+      ),
+    );
+  }
+}
+
+/// Log utility function
+Future<void> log(String message) async {
+  // 簡單的日誌函數
+  print('📸 $message');
+}
+
+/// Sync log utility function
+void logSync(String message) {
+  print('📸 $message');
 }
 
 // ===== 【UI頁面模組】結束 =====

@@ -1,4 +1,7 @@
-// ----- [services/measurement_calculator.dart] 開始 -----
+// ====================================================================
+// 測量計算服務模組
+// ====================================================================
+
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 

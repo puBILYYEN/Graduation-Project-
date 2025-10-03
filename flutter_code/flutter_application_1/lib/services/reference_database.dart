@@ -1,5 +1,8 @@
-// ----- [services/reference_database.dart] 開始 -----
-import '../models/measurement.dart';
+// ====================================================================
+// 參考物體數據庫服務模組
+// ====================================================================
+
+import '../models/container_analysis.dart';
 
 /// 參考物體數據庫
 class ReferenceObjectDatabase {
@@ -71,25 +74,29 @@ class ReferenceObjectDatabase {
 
   /// 取得所有參考物體
   static List<ReferenceObject> getAllObjects() {
+    // 取得所有參考物體的靜態方法：將所有類別的參考物體合併為單一列表
+    // 返回值：List<ReferenceObject> 包含硬幣、卡片、餐具等所有參考物體的完整列表
     return [
-      ...coins.values,
-      ...cards.values,
-      ...utensils.values,
+      ...coins.values,    // 展開硬幣映射表中的所有值，將硬幣物件加入列表
+      ...cards.values,    // 展開卡片映射表中的所有值，將卡片物件加入列表
+      ...utensils.values, // 展開餐具映射表中的所有值，將餐具物件加入列表
     ];
   }
 
   /// 根據類型取得參考物體
   static List<ReferenceObject> getObjectsByType(ReferenceObjectType type) {
-    switch (type) {
-      case ReferenceObjectType.coin:
-        return coins.values.toList();
-      case ReferenceObjectType.card:
-        return cards.values.toList();
-      case ReferenceObjectType.utensil:
-        return utensils.values.toList();
-      case ReferenceObjectType.custom:
-        return [];
+    // 根據指定類型篩選參考物體的靜態方法：從資料庫中取得特定類別的物體
+    // 參數type：ReferenceObjectType枚舉，指定要篩選的物體類型
+    // 返回值：List<ReferenceObject> 符合指定類型的參考物體列表
+    switch (type) { // 使用switch語句根據類型進行分流處理
+      case ReferenceObjectType.coin:    // 當類型為硬幣時
+        return coins.values.toList();   // 將硬幣映射表的所有值轉換為列表並返回
+      case ReferenceObjectType.card:    // 當類型為卡片時
+        return cards.values.toList();   // 將卡片映射表的所有值轉換為列表並返回
+      case ReferenceObjectType.utensil: // 當類型為餐具時
+        return utensils.values.toList(); // 將餐具映射表的所有值轉換為列表並返回
+      case ReferenceObjectType.custom:  // 當類型為自定義時
+        return [];                      // 返回空列表，表示目前無自定義參考物體
     }
   }
 }
-// ----- [services/reference_database.dart] 結束 -----

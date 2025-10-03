@@ -1,5 +1,25 @@
 // ----- [widgets/custom_painters.dart] 開始 -----
 import 'package:flutter/material.dart';
+
+// 新增測量模式列舉
+enum MeasurementMode {
+  calibration,
+  length,
+  area,
+  volume,
+}
+
+// 新增測量點類別
+class MeasurementPoint {
+  final Offset position;
+  final String? label;
+
+  MeasurementPoint({
+    required this.position,
+    this.label,
+  });
+}
+
 import '../models/container_analysis.dart';
 
 // ====================================================================
@@ -116,16 +136,23 @@ class MeasurementPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 設定繪製邊界，避免繪製到底部控制面板區域
-    final maxY = size.height * 0.75; // 只在上方75%區域繪製
-    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, maxY));
+    try {
+      // 設定繪製邊界，避免繪製到底部控制面板區域
+      final maxY = size.height * 0.75;
+      canvas.clipRect(Rect.fromLTWH(0, 0, size.width, maxY));
 
-    // 繪製參考線
-    _drawReferencePoints(canvas);
+      // 繪製參考線
+      if (referencePoints.isNotEmpty) {
+        _drawReferencePoints(canvas);
+      }
 
-    // 繪製測量點和線條
-    if (isCalibrated) {
-      _drawMeasurementPoints(canvas);
+      // 繪製測量點和線條
+      if (isCalibrated && measurementPoints.isNotEmpty) {
+        _drawMeasurementPoints(canvas);
+      }
+    } catch (e) {
+      // 錯誤處理：記錄錯誤但不中斷繪製
+      debugPrint('MeasurementPainter 繪製錯誤: $e');
     }
   }
 
@@ -234,7 +261,12 @@ class MeasurementPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant MeasurementPainter oldDelegate) {
+    return oldDelegate.referencePoints != referencePoints ||
+        oldDelegate.measurementPoints != measurementPoints ||
+        oldDelegate.currentMode != currentMode ||
+        oldDelegate.isCalibrated != isCalibrated;
+  }
 }
 
 // ====================================================================

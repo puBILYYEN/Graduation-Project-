@@ -27,21 +27,29 @@ class ContainerAnalysisData {
   final AnalysisMetadata metadata; // 分析元數據
 
   ContainerAnalysisData({
-    required this.imagePath,
-    required this.timestamp,
-    required this.container,
-    required this.measurements,
-    required this.metadata,
+    // ⚠️ 以下每行包含3個獨立的Dart語法元素：
+    // 1. { } = Named Parameters（具名參數）官方語法，來源：dart.dev/language/functions
+    // 2. required = 必填關鍵字，使具名參數變為必填，來源：dart.dev/language/functions
+    // 3. this.參數名 = Initializing Formal Parameters，自動賦值給實例變數，來源：dart.dev/language/constructors
+
+    required this.imagePath, // required（必填）+ this.imagePath（自動賦值給imagePath實例變數）
+    required this.timestamp, // required（必填）+ this.timestamp（自動賦值給timestamp實例變數）
+    required this.container, // required（必填）+ this.container（自動賦值給container實例變數）
+    required this.measurements, // required（必填）+ this.measurements（自動賦值給measurements實例變數）
+    required this.metadata, // required（必填）+ this.metadata（自動賦值給metadata實例變數）
   });
 
   /// 轉換為 JSON 格式，適合 RAG 系統使用
   Map<String, dynamic> toJson() {
+    // 將容器分析數據轉換為JSON格式的自定義方法：用於數據序列化和RAG系統整合
+    // 返回值：Map<String, dynamic> 包含所有容器分析資料的JSON映射表
     return {
-      'image_path': imagePath,
-      'timestamp': timestamp,
-      'container': container.toJson(),
-      'measurements': measurements.toJson(),
-      'metadata': metadata.toJson(),
+      'imagePath': imagePath, // 將圖片路徑字串加入JSON，鍵名為'image_path'
+      'timestamp': timestamp, // 將時間戳記字串加入JSON，鍵名為'timestamp'
+      'container': container.toJson(), // 呼叫容器物件的toJson()方法，將容器資訊轉為JSON子物件
+      'measurements':
+          measurements.toJson(), // 呼叫測量結果物件的toJson()方法，將測量數據轉為JSON子物件
+      'metadata': metadata.toJson(), // 呼叫分析元數據物件的toJson()方法，將元數據轉為JSON子物件
     };
   }
 }
@@ -54,18 +62,24 @@ class ContainerInfo {
   final List<String> features; // 特徵描述
 
   ContainerInfo({
-    required this.shape,
-    required this.material,
-    required this.color,
-    required this.features,
+    // ⚠️ 每個參數包含2個獨立的Dart官方語法元素：
+    // 1. required = 必填關鍵字（dart.dev/language/functions）
+    // 2. this.參數名 = Initializing Formal Parameters（dart.dev/language/constructors）
+
+    required this.shape, // required（必填）+ this.shape（自動賦值給shape實例變數）
+    required this.material, // required（必填）+ this.material（自動賦值給material實例變數）
+    required this.color, // required（必填）+ this.color（自動賦值給color實例變數）
+    required this.features, // required（必填）+ this.features（自動賦值給features實例變數）
   });
 
   Map<String, dynamic> toJson() {
+    // 將容器資訊轉換為JSON格式的自定義方法：序列化容器的物理屬性數據
+    // 返回值：Map<String, dynamic> 包含容器形狀、材質、顏色、特徵的JSON映射表
     return {
-      'shape': shape,
-      'material': material,
-      'color': color,
-      'features': features,
+      'shape': shape, // 將容器形狀字串加入JSON，如'圓柱體'、'立方體'等
+      'material': material, // 將材質推測字串加入JSON，如'塑膠'、'金屬'等
+      'color': color, // 將主要顏色字串加入JSON，如'白色'、'透明'等
+      'features': features, // 將特徵描述字串列表加入JSON，如['有蓋子', '透明', '圓形底部']
     };
   }
 }
@@ -75,18 +89,18 @@ class MeasurementResults {
   final double volume; // 容積 (cm³)
   final double confidence; // 信心度 (0.0-1.0)
   final String method; // 測量方法
-  final Map<String, double>? dimensions; // 尺寸（長寬高等）
+  final Map<String, double> dimensions; // 尺寸（長寬高等）
 
   MeasurementResults({
     required this.volume,
     required this.confidence,
     required this.method,
-    this.dimensions,
+    required this.dimensions,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'volume_cm3': volume,
+      'volume': volume,
       'confidence': confidence,
       'method': method,
       'dimensions': dimensions,
@@ -110,10 +124,10 @@ class AnalysisMetadata {
 
   Map<String, dynamic> toJson() {
     return {
-      'device_model': deviceModel,
-      'app_version': appVersion,
-      'processing_time_seconds': processingTime,
-      'camera_settings': settings,
+      'deviceModel': deviceModel,
+      'appVersion': appVersion,
+      'processingTime': processingTime,
+      'settings': settings,
     };
   }
 }

@@ -1,7 +1,17 @@
-// ----- [pages/auth/register_page.dart] 開始 -----
+// ====================================================================
+// 註冊頁面 (Register Page)
+// ====================================================================
+/*
+// 模組化建議：【頁面模組 - pages/auth/register_page.dart】
+RegisterPage 和 _RegisterPageState 可以獨立成為註冊頁面模組。
+與登入頁面相關，同樣適合放在 pages/auth/ 目錄下。
+*/
+
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import './login_page.dart';
+
+// ====================================================================
+// 註冊頁面 (Register Page)
+// ====================================================================
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -329,4 +339,5 @@ class _RegisterPageState extends State<RegisterPage> {
 }
 
 // ====================================================================
+// ----- [pages/auth/register_page.dart] 結束 -----
 // ----- [pages/auth/register_page.dart] 結束 -----
