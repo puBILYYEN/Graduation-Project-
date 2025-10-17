@@ -1,0 +1,824 @@
+// ====================================================================
+// 主檔案 - 載入工具和程式起始點
+// ====================================================================
+/*
+【Flutter 最佳實踐 - 模組化建議】
+
+這個檔案目前包含完整的應用程式，建議按照 Flutter 2025 最佳實踐
+採用 Feature-First 架構，將程式碼拆分成以下獨立模組：
+
+📁 建議的專案結構：
+lib/
+├── main.dart                      # 主程式入口點
+├── core/                          # 核心功能
+│   ├── theme/                     # 主題設定
+│   └── utils/                     # 通用工具
+├── data/                          # 資料層
+│   ├── models/                    # 資料模型
+│   │   ├── container_analysis.dart
+│   │   ├── measurement.dart
+│   │   └── nutrition.dart
+│   └── services/                  # 服務層
+│       ├── reference_database.dart
+│       ├── measurement_calculator.dart
+│       └── log_manager.dart
+└── features/                      # 功能模組(Feature-First)
+    ├── auth/                      # 登入認證功能
+    │   └── presentation/
+    │       ├── login_page.dart
+    │       └── register_page.dart
+    ├── home/                      # 首頁功能
+    │   └── presentation/
+    │       └── home_page.dart
+    ├── analysis/                  # 身體分析功能
+    │   └── presentation/
+    │       └── body_analysis_page.dart
+    ├── food_diary/                # 飲食日記功能
+    │   └── presentation/
+    │       └── food_diary_page.dart
+    └── camera/                    # 相機功能
+        └── presentation/
+            └── camera_screen.dart
+
+✅ 採用 Feature-First 架構的好處：
+- 每個功能模組獨立，易於理解和維護
+- 團隊可以同時開發不同功能，不會互相干擾
+- 新增功能只需新增資料夾，不影響現有程式碼
+- 更容易進行單元測試和整合測試
+- 符合 Clean Architecture 和 SOLID 原則
+*/
+import 'package:flutter/material.dart'; // 載入製作漂亮畫面需要的工具箱
+import 'package:flutter/cupertino.dart'; // 載入蘋果手機風格的介面工具
+import 'package:flutter/services.dart'; // 載入控制手機功能的工具(像是控制螢幕轉向)
+import 'package:camera/camera.dart'; // 載入使用相機的工具
+import 'package:path_provider/path_provider.dart'; // 載入找檔案存放位置的工具
+import 'package:path/path.dart' as path; // 載入處理檔案路徑的工具
+import 'package:image_picker/image_picker.dart'; // 載入從相簿選照片的工具
+import 'package:permission_handler/permission_handler.dart'; // 載入向手機要求使用相機、相簿權限的工具
+import 'package:sensors_plus/sensors_plus.dart'; // 載入使用手機感應器的工具(像是重力感應)
+import 'package:google_sign_in/google_sign_in.dart'; // 載入用Google帳號登入的工具
+// import 'package:image_gallery_saver/image_gallery_saver.dart'; // 已註解：與當前Flutter版本不相容，Camera模組將使用 gal 套件替代
+import 'package:gal/gal.dart'; // 載入把照片存到相簿的工具 (替代 image_gallery_saver)
+import 'dart:math' as math; // 載入數學計算工具(像是開根號、三角函數)
+import 'dart:async'; // 載入讓程式可以同時做很多事情的工具
+import 'dart:io'; // 載入讀寫檔案的工具
+import 'dart:typed_data'; // 載入處理特殊資料格式的工具
+import 'dart:convert'; // 載入轉換JSON格式的工具
+import 'package:http/http.dart' as http; // 載入跟網路伺服器溝通的工具
+import 'package:firebase_core/firebase_core.dart'; // 載入Firebase雲端服務的基礎工具
+import 'package:cloud_firestore/cloud_firestore.dart'; // 載入雲端資料庫的工具
+import 'package:firebase_storage/firebase_storage.dart'; // 載入雲端存檔空間的工具
+
+// =====================================================================
+// 專案模組 Import - 已拆分的模組
+// =====================================================================
+// 資料模型
+import 'data/models/container_analysis.dart'; // 容器分析資料模型
+import 'data/models/measurement.dart'; // 測量相關資料模型
+import 'data/models/nutrition.dart'; // 營養和健康資料模型
+
+// 服務層
+import 'data/services/reference_database.dart'; // 參考物體資料庫
+import 'data/services/measurement_calculator.dart'; // 測量計算服務
+import 'data/services/log_manager.dart'; // 日誌管理服務
+
+// 核心模組
+import 'core/app.dart'; // 應用程式根節點
+import 'core/navigation/main_frame.dart'; // 主框架導航
+
+// 功能模組 - 認證
+import 'features/auth/presentation/login_page.dart'; // 登入頁面
+import 'features/auth/presentation/register_page.dart'; // 註冊頁面
+
+// 功能模組 - 首頁
+import 'features/home/presentation/home_page.dart'; // 首頁內容
+
+// 功能模組 - 身體分析
+import 'features/analysis/presentation/body_analysis_page.dart'; // 身體分析頁面
+
+// 功能模組 - 飲食日記
+import 'features/food_diary/presentation/food_diary_page.dart'; // 飲食日記頁面
+
+// 功能模組 - 相機
+import 'features/camera/presentation/camera_screen.dart'; // 相機頁面
+
+// =====================================================================
+// 【資料層 - Data Layer】開始
+// =====================================================================
+/*
+📦 資料模型區 - 符合 Flutter 最佳實踐的資料層設計
+
+建議拆分路徑：lib/data/models/
+
+這個區域包含所有資料結構定義，遵循以下原則：
+1. 純資料類別，不包含業務邏輯
+2. 使用 final 欄位確保資料不可變性
+3. 提供 toJson/fromJson 方法支援資料序列化
+4. 每個模型專注於單一職責
+
+包含的資料模型：
+- ContainerAnalysisData: 容器分析的資料結構
+- ContainerInfo: 容器資訊類別
+- MeasurementResults: 測量結果類別
+- AnalysisMetadata: 分析的額外資訊類別
+- ReferenceObject: 參考物件類別(像硬幣、卡片等)
+- MeasurementPoint: 測量點類別
+- MeasurementResult: 測量結果類別
+*/
+// ====================================================================
+// RAG系統的資料結構 - 已移至 data/models/container_analysis.dart
+// ====================================================================
+// ✅ 已拆分: ContainerAnalysisData, ContainerInfo, MeasurementResults, AnalysisMetadata
+
+// ====================================================================
+// 測量相關資料模型 - 已移至 data/models/measurement.dart
+// ====================================================================
+// ✅ 已拆分: MeasurementMethod, MeasurementMode, ReferenceObjectType,
+//           ReferenceObject, MeasurementPoint, MeasurementResult
+
+// =====================================================================
+// 【資料層 - Data Layer】結束
+// =====================================================================
+
+// =====================================================================
+// 【服務層 - Service Layer】開始
+// =====================================================================
+/*
+⚙️ 服務層 - 符合 Flutter 最佳實踐的業務邏輯層
+
+建議拆分路徑：lib/data/services/
+
+服務層設計原則：
+1. 封裝業務邏輯，避免在 UI 層處理複雜運算
+2. 使用單例模式(Singleton)管理共用資源
+3. 提供清晰的 API 介面給上層呼叫
+4. 可獨立測試，不依賴 UI 框架
+
+包含的服務類別：
+1. ReferenceObjectDatabase: 參考物件資料庫服務
+   - 管理各種物品的標準尺寸(硬幣、卡片等)
+
+2. MeasurementCalculator: 測量計算服務
+   - 提供距離、面積、體積的計算功能
+
+3. LogManager: 日誌管理服務
+   - 記錄應用程式運作狀況，方便除錯和監控
+*/
+// ====================================================================
+// 參考物體資料庫和服務(提供各種功能的工具)
+// ====================================================================
+
+// ====================================================================
+// 服務層 - 已移至 data/services/
+// ====================================================================
+// ✅ 已拆分: ReferenceObjectDatabase → reference_database.dart
+// ✅ 已拆分: MeasurementCalculator, DevicePhysicalOrientation → measurement_calculator.dart
+// ✅ 已拆分: LogManager, log(), logSync() → log_manager.dart
+
+// =====================================================================
+// 【服務層 - Service Layer】結束
+// =====================================================================
+
+// =====================================================================
+// 【應用程式入口 - Application Entry Point】
+// =====================================================================
+/*
+🚀 程式入口點 - Flutter 應用程式的起始位置
+
+符合 Flutter 最佳實踐：
+1. main() 函數應該保持簡潔
+2. 只處理必要的初始化工作
+3. 儘快呼叫 runApp() 啟動應用程式
+
+初始化順序：
+1. WidgetsFlutterBinding - 確保 Flutter 框架就緒
+2. Firebase / 資料庫初始化
+3. 服務層初始化 (如 LogManager)
+4. 設定系統偏好 (如螢幕方向)
+5. 啟動應用程式
+*/
+// ----- [main函數和應用程式入口] 開始 -----
+// 程式的起始點 - 程式從這裡開始執行
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // 確保Flutter準備好了(在做其他事情之前必須先呼叫這個)
+
+  // 初始化日誌管理器 - 啟動記錄系統
+  await LogManager.instance.initialize();
+
+  // 設定螢幕方向 - 允許手機可以直放或橫放(拍照頁面會另外控制)
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp, // 允許正常直立
+    DeviceOrientation.portraitDown, // 允許上下顛倒
+    DeviceOrientation.landscapeLeft, // 允許左橫
+    DeviceOrientation.landscapeRight, // 允許右橫
+  ]);
+
+  runApp(const MyApp()); // 啟動應用程式
+}
+// ----- [main函數和應用程式入口] 結束 -----
+
+// =====================================================================
+// 【應用程式核心 - Application Core】開始
+// =====================================================================
+/*
+🏗️ 應用程式核心架構 - 負責整體框架和導航
+
+符合 Flutter 最佳實踐：
+1. MyApp: 應用程式根 Widget，設定主題和路由
+2. MainFrame: 統一導航框架，管理底部導航列
+3. 分離資料模型 (BodyMetrics, FoodEntry 等)
+
+建議拆分：
+- lib/core/app.dart - MyApp 根 Widget
+- lib/core/navigation/ - 導航相關邏輯
+- lib/data/models/nutrition.dart - 營養相關資料模型
+*/
+// ====================================================================
+// 統一導航框架(負責控制頁面切換)
+// ====================================================================
+
+// 主要頁面選項 - 列出App裡可以切換的主要頁面(不包含相機頁面)
+enum AppPage {
+  home, // 首頁 - 編號0，顯示營養資訊和AI建議
+  foodDiary, // 飲食記錄 - 編號1，管理每天吃了什麼
+  exercise, // 運動 - 編號3(跳過相機的編號2)，記錄運動狀況
+  analysis, // 身體分析 - 編號4，分析健康數據和報告
+}
+
+// 統一主框架Widget - App的主要容器，負責管理頁面切換和底部選單
+class MainFrame extends StatefulWidget {
+  const MainFrame({super.key}); // 建構函數
+
+  @override
+  State<MainFrame> createState() => _MainFrameState(); // 建立狀態物件
+}
+
+// MainFrame的狀態管理類別(用來記錄目前顯示哪一頁)
+class _MainFrameState extends State<MainFrame> {
+  AppPage _currentPage = AppPage.home; // 目前選中的頁面(預設是首頁)
+
+  // 導航索引對應方法 - 把頁面選項轉換成底部選單的編號
+  int _getNavigationIndex() {
+    switch (_currentPage) {
+      case AppPage.home: // 首頁對應編號0
+        return 0;
+      case AppPage.foodDiary: // 飲食記錄對應編號1
+        return 1;
+      case AppPage.exercise: // 運動對應編號3(跳過相機的編號2)
+        return 3;
+      case AppPage.analysis: // 身體分析對應編號4
+        return 4;
+    }
+  }
+
+  // 從編號轉換為頁面選項 - 把底部選單的編號轉換成頁面選項
+  AppPage _getPageFromNavigationIndex(int index) {
+    switch (index) {
+      case 0: // 編號0對應首頁
+        return AppPage.home;
+      case 1: // 編號1對應飲食記錄
+        return AppPage.foodDiary;
+      case 3: // 編號3對應運動(跳過編號2的相機)
+        return AppPage.exercise;
+      case 4: // 編號4對應身體分析
+        return AppPage.analysis;
+      default: // 預設情況回到首頁
+        return AppPage.home;
+    }
+  }
+
+  // 建立目前頁面的Widget - 根據目前選的頁面顯示對應的內容
+  Widget _buildCurrentPage() {
+    print('構建頁面: $_currentPage'); // 輸出除錯訊息
+    switch (_currentPage) {
+      case AppPage.home: // 首頁情況
+        print('返回首頁內容'); // 除錯訊息
+        return const HomePageContent(); // 回傳首頁內容Widget
+      case AppPage.foodDiary: // 飲食記錄情況
+        print('返回飲食日記內容'); // 除錯訊息
+        return const FoodDiaryPageContent(); // 回傳飲食記錄內容Widget
+      case AppPage.exercise: // 運動頁面情況
+        print('返回運動頁面內容'); // 除錯訊息
+        return const Center(
+            child: Text('運動頁面開發中...',
+                style: TextStyle(fontSize: 18))); // 暫時顯示開發中的提示
+      case AppPage.analysis: // 身體分析情況
+        print('返回身體分析內容'); // 除錯訊息
+        return const BodyAnalysisPageContent(); // 回傳身體分析內容Widget
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    print('MainFrame build() 被調用，當前頁面: $_currentPage');
+    return Scaffold(
+      body: _buildCurrentPage(),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _getNavigationIndex(),
+        onTap: (index) {
+          print('導航欄點擊 - index: $index, 當前頁面: $_currentPage');
+          if (index == 2) {
+            print('跳轉到相機頁面');
+            // 相機頁面特殊處理 - 用push開啟相機頁面(而不是切換tab)
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CameraScreen()),
+            );
+          } else {
+            // 對應編號到頁面選項
+            final newPage = _getPageFromNavigationIndex(index);
+            print('切換頁面: $_currentPage -> $newPage');
+            setState(() {
+              _currentPage = newPage;
+            });
+            print('setState 完成，當前頁面: $_currentPage');
+          }
+        },
+        backgroundColor: Colors.white, // 底部選單背景色是白色
+        selectedItemColor: Colors.black87, // 選中的項目顏色是深灰色
+        unselectedItemColor: Colors.grey[400], // 沒選中的項目顏色是淺灰色
+        selectedFontSize: 12, // 選中的項目字體大小
+        unselectedFontSize: 12, // 沒選中的項目字體大小
+        elevation: 0, // 陰影效果設為0(沒有陰影)
+        items: const [
+          // 底部選單項目列表(定義所有選項)
+          BottomNavigationBarItem(
+            // 首頁選項(編號0)
+            icon: Icon(Icons.home_outlined), // 沒選中時的空心家圖示
+            activeIcon: Icon(Icons.home), // 選中時的實心家圖示
+            label: '首頁', // 項目文字
+          ),
+          BottomNavigationBarItem(
+            // 飲食記錄選項(編號1)
+            icon: Icon(Icons.restaurant_menu_outlined), // 沒選中時的空心餐廳圖示
+            activeIcon: Icon(Icons.restaurant_menu), // 選中時的實心餐廳圖示
+            label: '飲食記錄', // 項目文字
+          ),
+          BottomNavigationBarItem(
+            // 相機拍照選項(編號2)
+            icon: Icon(Icons.camera_alt_outlined), // 沒選中時的空心相機圖示
+            activeIcon: Icon(Icons.camera_alt), // 選中時的實心相機圖示
+            label: '拍照辨識', // 項目文字
+          ),
+          BottomNavigationBarItem(
+            // 運動選項(編號3)
+            icon: Icon(Icons.fitness_center_outlined), // 沒選中時的空心健身圖示
+            activeIcon: Icon(Icons.fitness_center), // 選中時的實心健身圖示
+            label: '運動', // 項目文字
+          ),
+          BottomNavigationBarItem(
+            // 身體分析選項(編號4)
+            icon: Icon(Icons.analytics_outlined), // 沒選中時的空心分析圖示
+            activeIcon: Icon(Icons.analytics), // 選中時的實心分析圖示
+            label: '分析', // 項目文字
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ====================================================================
+// 營養和健康資料模型 - 已移至 data/models/nutrition.dart
+// ====================================================================
+// ✅ 已拆分: BodyMetrics, FoodEntry, NutrientData
+
+// ====================================================================
+// 主應用程式類別 - 已移至 core/app.dart
+// ====================================================================
+// ✅ 已拆分: MyApp → core/app.dart
+
+// =====================================================================
+// 【應用程式核心 - Application Core】結束
+// =====================================================================
+
+// =====================================================================
+// 【展示層 - Presentation Layer】開始
+// =====================================================================
+/*
+🎨 展示層 (UI層) - 符合 Flutter 最佳實踐的頁面組織
+
+建議採用 Feature-First 架構：
+lib/features/
+├── auth/              # 認證功能
+│   └── presentation/
+│       ├── login_page.dart
+│       └── register_page.dart
+├── home/              # 首頁功能
+│   └── presentation/
+│       └── home_page.dart
+├── analysis/          # 分析功能
+│   └── presentation/
+│       └── body_analysis_page.dart
+├── food_diary/        # 飲食日記功能
+│   └── presentation/
+│       └── food_diary_page.dart
+└── camera/            # 相機功能
+    └── presentation/
+        └── camera_screen.dart
+
+每個 feature 應該包含：
+- presentation/: UI 相關檔案 (pages, widgets)
+- domain/: 業務邏輯 (use cases)
+- data/: 資料處理 (如果有特定資料需求)
+*/
+// ====================================================================
+// 認證功能 (Auth Feature) - 已移至 features/auth/presentation/
+// ====================================================================
+// ✅ 已拆分: LoginPage → features/auth/presentation/login_page.dart
+// ✅ 已拆分: RegisterPage → features/auth/presentation/register_page.dart
+
+// ----- [features/auth/presentation/] 開始 -----
+// (已拆分完成，請使用 import 'features/auth/presentation/login_page.dart')
+// ----- [features/auth/presentation/] 結束 -----
+
+// ====================================================================
+// 首頁功能 (Home Feature) - 已移至 features/home/presentation/
+// ====================================================================
+// ✅ 已拆分: HomePageContent → features/home/presentation/home_page.dart
+
+// ----- [features/home/presentation/] 開始 -----
+// (已拆分完成，請使用 import 'features/home/presentation/home_page.dart')
+// ----- [features/home/presentation/] 結束 -----
+
+// ====================================================================
+// 身體分析功能 (Analysis Feature) - 已移至 features/analysis/presentation/
+// ====================================================================
+// ✅ 已拆分: BodyAnalysisPageContent → features/analysis/presentation/body_analysis_page.dart
+
+// ----- [features/analysis/presentation/] 開始 -----
+// (已拆分完成，請使用 import 'features/analysis/presentation/body_analysis_page.dart')
+// ----- [features/analysis/presentation/] 結束 -----
+
+// ===== 已移至 features/food_diary/presentation/food_diary_page.dart =====
+// ----- [pages/diary/food_diary_page.dart] 開始 -----
+// 飲食記錄頁面 (Food Diary Page)
+// (已拆分完成，請使用 import 'features/food_diary/presentation/food_diary_page.dart')
+// ----- [pages/diary/food_diary_page.dart] 結束 -----
+// ===== 結束 =====
+
+// ===== 已移至 features/camera/presentation/camera_screen.dart =====
+// ====================================================================
+// 相機頁面 (Camera Screen)
+// ====================================================================
+// (已拆分完成，請使用 import 'features/camera/presentation/camera_screen.dart')
+/*
+模組化建議：【頁面模組 - pages/camera/camera_screen.dart】
+CameraScreen 和 _CameraScreenState 是核心的相機功能模組。
+包含相機控制、拍照、圖像處理等複雜邏輯，適合獨立成為相機模組。
+可能需要額外的子模組：
+- widgets/camera_controls.dart (相機控制元件)
+- utils/image_processing.dart (圖像處理工具)
+*/
+
+// ===== 結束 =====
+
+// =====================================================================
+// 【展示層 - Presentation Layer】結束
+// =====================================================================
+
+// =====================================================================
+// 【工具層 - Utils & Widgets Layer】開始
+// =====================================================================
+/*
+🛠️ 工具層 - 可重用的元件和工具類別
+
+建議拆分路徑：
+lib/
+├── widgets/           # 通用 Widget 元件
+│   ├── custom_painters.dart
+│   └── common/
+└── utils/             # 工具函數
+    └── image_processing.dart
+
+工具層設計原則：
+1. 高度可重用 - 不依賴特定業務邏輯
+2. 單一職責 - 每個工具類別只做一件事
+3. 易於測試 - 輸入輸出明確
+4. 文件完整 - 提供使用範例
+
+包含的工具：
+- CustomPainter: 自訂繪圖器 (邊緣檢測、測量標記等)
+- ImageProcessing: 圖片處理工具
+*/
+// ====================================================================
+// 自訂繪圖器 (Custom Painters)
+// ====================================================================
+
+// ----- [widgets/custom_painters.dart] 開始 -----
+// 邊緣檢測繪畫器 - 用於在圖片上繪製偵測到的邊緣
+/*
+🎨 CustomPainter 工具 - lib/widgets/custom_painters.dart
+
+包含：
+- EdgeDetectionPainter: 繪製邊緣檢測結果
+- MeasurementPainter: 繪製測量標記和數值
+*/
+// ====================================================================
+
+// ====================================================================
+// 食物照片選擇器 (Food Photo Selector)
+// ====================================================================
+class FoodPhotoSelector extends StatefulWidget {
+  const FoodPhotoSelector({super.key});
+
+  @override
+  State<FoodPhotoSelector> createState() => _FoodPhotoSelectorState();
+}
+
+class _FoodPhotoSelectorState extends State<FoodPhotoSelector> {
+  Set<int> selectedItems = {0}; // 預設選中第一個
+
+  // 模擬食物圖片資料
+  final List<FoodItem> foodItems = [
+    FoodItem(id: 0, imagePath: 'assets/food1.jpg', description: '早餐拼盤'),
+    FoodItem(id: 1, imagePath: 'assets/food2.jpg', description: '意大利面'),
+    FoodItem(id: 2, imagePath: 'assets/food3.jpg', description: '烤面包配菜'),
+    FoodItem(id: 3, imagePath: 'assets/food4.jpg', description: '沙拉配面包'),
+    FoodItem(id: 4, imagePath: 'assets/food5.jpg', description: '牛排配牛油果'),
+    FoodItem(id: 5, imagePath: 'assets/food6.jpg', description: '意大利面条'),
+    FoodItem(id: 6, imagePath: 'assets/food7.jpg', description: '番茄沙拉'),
+    FoodItem(id: 7, imagePath: 'assets/food8.jpg', description: '煎蛋配蔬菜'),
+    FoodItem(id: 8, imagePath: 'assets/food9.jpg', description: '鸡肉配番茄'),
+    FoodItem(id: 9, imagePath: 'assets/food10.jpg', description: '燕麥配堅果'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.black),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          '選擇照片',
+          style: TextStyle(
+            color: Colors.black,
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          // 選擇指示器
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade400),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: selectedItems.isNotEmpty
+                      ? const Icon(
+                          Icons.check,
+                          size: 16,
+                          color: Colors.blue,
+                        )
+                      : null,
+                ),
+              ],
+            ),
+          ),
+
+          // 照片網格
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: foodItems.length,
+                itemBuilder: (context, index) {
+                  final isSelected = selectedItems.contains(index);
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isSelected) {
+                          selectedItems.remove(index);
+                        } else {
+                          selectedItems.add(index);
+                        }
+                      });
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: isSelected
+                            ? Border.all(color: Colors.blue, width: 2)
+                            : null,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          fit: StackFit.expand,
+                          children: [
+                            // 背景色
+                            Container(
+                              color: _getBackgroundColor(index),
+                            ),
+
+                            // 食物圖片佔位符
+                            Center(
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(60),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(60),
+                                  child: _buildFoodPlaceholder(index),
+                                ),
+                              ),
+                            ),
+
+                            // 選中狀態覆蓋層
+                            if (isSelected)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Align(
+                                  alignment: Alignment.topRight,
+                                  child: Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: CircleAvatar(
+                                      radius: 12,
+                                      backgroundColor: Colors.blue,
+                                      child: Icon(
+                                        Icons.check,
+                                        size: 16,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          // 底部按鈕
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: selectedItems.isNotEmpty
+                        ? () {
+                            // 確認選擇的邏輯
+                            Navigator.of(context).pop(selectedItems);
+                          }
+                        : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      disabledBackgroundColor: Colors.grey.shade300,
+                    ),
+                    child: const Text(
+                      '確認',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text(
+                    '取消',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getBackgroundColor(int index) {
+    final colors = [
+      const Color(0xFFF5E6D3), // 米色
+      const Color(0xFFD3E5E3), // 浅绿色
+      const Color(0xFFF0F0F0), // 浅灰色
+      const Color(0xFFD3E5E3), // 浅绿色
+      const Color(0xFFD3E5E3), // 浅绿色
+      const Color(0xFFD3E5E3), // 浅绿色
+      const Color(0xFF8BA3A3), // 深绿色
+      const Color(0xFFD3E5E3), // 浅绿色
+      const Color(0xFFD3E5E3), // 浅绿色
+      const Color(0xFFD3E5E3), // 浅绿色
+    ];
+    return colors[index % colors.length];
+  }
+
+  Widget _buildFoodPlaceholder(int index) {
+    // 這裡可以替換為實際的食物圖片
+    final icons = [
+      Icons.breakfast_dining,
+      Icons.lunch_dining,
+      Icons.dinner_dining,
+      Icons.local_pizza,
+      Icons.restaurant,
+      Icons.fastfood,
+      Icons.local_cafe,
+      Icons.cake,
+      Icons.restaurant_menu,
+      Icons.local_dining,
+    ];
+
+    return Container(
+      color: Colors.grey.shade100,
+      child: Icon(
+        icons[index % icons.length],
+        size: 40,
+        color: Colors.grey.shade600,
+      ),
+    );
+  }
+}
+
+class FoodItem {
+  final int id;
+  final String imagePath;
+  final String description;
+
+  FoodItem({
+    required this.id,
+    required this.imagePath,
+    required this.description,
+  });
+}
+
+// ====================================================================
+// 營養標籤確認頁面
+// ====================================================================
+
+// ====================================================================
+// 參考物體測量頁面
+// ====================================================================
+
+// ====================================================================
+// 自定義繪圖器 - 用於繪製測量點和線條
+// ====================================================================
+// ----- [widgets/custom_painters.dart] 結束 -----
+
+// ----- [utils/image_processing.dart] 開始 -----
+// 已拆分至 lib/widgets/custom_painters.dart
+
+// ====================================================================
+// 多圖片處理螢幕 (Multi-Image Processing Screen)
+// ====================================================================
+// 已拆分至 lib/features/multi_image/presentation/multi_image_processing_screen.dart
+// ====================================================================
+// ----- [utils/image_processing.dart] 結束 -----
+
+// =====================================================================
+// 【工具層 - Utils & Widgets Layer】結束
+// =====================================================================
+
+// ====================================================================
+// 檔案結束 - End of File
+// ====================================================================
