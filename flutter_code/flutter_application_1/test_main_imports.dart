@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 
 // 導入所有拆分出來的模組
 import 'lib/widgets/custom_painters.dart';
-import 'lib/utils/image_processing.dart';
+import 'package:flutter_application_1/core/services/image_processing/image_processing.dart';
 import 'lib/models/container_analysis.dart';
-import 'lib/services/log_manager.dart';
-import 'lib/services/measurement_calculator.dart';
-import 'lib/services/reference_database.dart';
+import 'package:flutter_application_1/core/services/logging/log_manager.dart';
+import 'package:flutter_application_1/features/measurement/services/measurement_calculator.dart';
+import 'package:flutter_application_1/features/measurement/data/reference_database.dart';
 
 void main() {
   runApp(TestApp());

@@ -10,6 +10,12 @@ import 'package:provider/provider.dart';
 // 導入新的路由和服務管理
 import 'core/router/app_router.dart';
 import 'core/services/camera_service.dart';
+import 'core/services/auth_service.dart';
+import 'core/services/firestore_service.dart';
+
+import 'core/services/api_service.dart';
+
+import 'firebase_options.dart';
 
 // ====================================================================
 // 主函數 - 應用程式入口點
@@ -21,7 +27,10 @@ Future<void> main() async {
 
   // 初始化 Firebase
   try {
-    await Firebase.initializeApp();
+    // 使用由 FlutterFire CLI 自動產生的設定檔來初始化 Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     print('Firebase 初始化成功');
   } catch (e) {
     print('Firebase 初始化失敗: $e');
@@ -65,8 +74,12 @@ class MyApp extends StatelessWidget {
       providers: [
         // 1. 提供相機服務
         Provider<CameraService>.value(value: cameraService),
-        // 之後可以加入其他的服務，例如認證服務
-        // Provider<AuthService>(create: (_) => AuthService()),
+        // 2. 提供認證服務
+        Provider<AuthService>(create: (_) => AuthService()),
+        // 3. 提供 Firestore 服務
+        Provider<FirestoreService>(create: (_) => FirestoreService()),
+        // 4. 提供 API 服務
+        Provider<ApiService>(create: (_) => ApiService()),
       ],
       child: MaterialApp.router(
         title: '智慧營養追蹤應用程式',

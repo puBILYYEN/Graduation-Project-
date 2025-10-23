@@ -16,7 +16,8 @@ import '../../models/reference_object.dart';
 import '../../models/container_analysis.dart';
 import '../../models/measurement.dart';
 import '../../widgets/custom_painters.dart';
-import '../../utils/logger.dart';
+import 'package:flutter_application_1/core/services/logging/logger.dart';
+import 'package:flutter_application_1/core/services/api/api_services.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:convert';
@@ -518,7 +519,7 @@ class _CameraScreenState extends State<CameraScreen>
       final jsonData = ragData.toJson();
 
       // 步驟1: 先傳送到 Flask 後端
-      await _sendRagDataToFlask(jsonData);
+      await RagApiService.sendRagData(jsonData);
 
       // 步驟2: 再存儲到 Firebase Firestore
       await _saveToFirestore(ragData);

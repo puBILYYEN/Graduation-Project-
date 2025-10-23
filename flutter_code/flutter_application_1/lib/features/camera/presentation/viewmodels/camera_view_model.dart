@@ -261,17 +261,40 @@ class CameraViewModel extends ChangeNotifier {
     }
   }
   
-  /// 一般拍照，拍完進入營養標籤頁
+  /// 一般拍照，分析後進入營養標籤頁
   Future<void> takePictureAndNavigate(BuildContext context) async {
     if (_controller == null || !_controller!.value.isInitialized) return;
     _setLoading(true);
     try {
+      // 1. 拍照
       final image = await _controller!.takePicture();
+      await log('拍照成功，圖片路徑: ${image.path}');
+
+      if (!context.mounted) return;
+
+      // 2. 呼叫 API 進行分析
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      await log('正在上傳圖片至後端進行分析...');
+      final analysisResult = await apiService.analyzeImage(image.path);
+      await log('後端分析完成');
+
       if (context.mounted) {
-        context.push('/camera/nutrition-label', extra: image.path);
+        // 3. 導航到結果頁，並同時傳遞圖片路徑和分析結果
+        context.push('/camera/nutrition-label', extra: {
+          'imagePath': image.path,
+          'analysis': analysisResult,
+        });
       }
     } catch (e) {
-      await log('拍照失敗: $e');
+      await log('拍照或分析過程中發生錯誤: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('圖片分析失敗: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       _setLoading(false);
     }

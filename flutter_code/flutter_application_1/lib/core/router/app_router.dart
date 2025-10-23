@@ -12,14 +12,42 @@ import '../../features/camera/presentation/pages/smart_camera_page.dart';
 import '../../features/nutrition/presentation/pages/nutrition_label_screen.dart';
 import '../../features/measurement/presentation/pages/reference_measurement_page.dart';
 import '../../features/camera/presentation/pages/multiple_images_processing_page.dart';
-import 'package:image_picker/image_picker.dart';
+import '../../features/food_diary/presentation/pages/food_diary_page.dart';
 
+
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AppRouter {
   // 建立 GoRouter 的靜態實例
   static final GoRouter router = GoRouter(
     // 初始路由位置
     initialLocation: '/',
+
+    // 路由重新導向邏輯 (導航守衛)
+    redirect: (context, state) {
+      // 取得目前 Firebase 使用者
+      final user = FirebaseAuth.instance.currentUser;
+
+      // 檢查使用者是否已登入
+      final bool loggedIn = user != null;
+
+      // 檢查目標路徑是否為登入或註冊頁面
+      final bool loggingIn = state.matchedLocation == '/' || state.matchedLocation == '/register';
+
+      // 導航邏輯：
+      // 1. 如果使用者未登入，且目標不是登入/註冊頁，則導向到登入頁
+      if (!loggedIn && !loggingIn) {
+        return '/';
+      }
+
+      // 2. 如果使用者已登入，且目標是登入/註冊頁，則導向到主頁
+      if (loggedIn && loggingIn) {
+        return '/home';
+      }
+
+      // 3. 其他情況，不做任何操作
+      return null;
+    },
 
     // 路由列表
     routes: [
@@ -42,6 +70,12 @@ class AppRouter {
         builder: (context, state) => const MainFrame(),
       ),
 
+      // 飲食日記頁面
+      GoRoute(
+        path: '/diary',
+        builder: (context, state) => const FoodDiaryPage(),
+      ),
+
       // 智慧相機頁面
       GoRoute(
         path: '/camera',
@@ -51,11 +85,15 @@ class AppRouter {
           GoRoute(
             path: 'nutrition-label', // -> /camera/nutrition-label
             builder: (context, state) {
-              final imagePath = state.extra as String?;
-              if (imagePath == null) {
-                return const Text('錯誤：缺少圖片路徑');
+              // 修正：接收 Map 而不是 String
+              final data = state.extra as Map<String, dynamic>?;
+              if (data == null || data['imagePath'] == null || data['analysis'] == null) {
+                return const Scaffold(body: Center(child: Text('錯誤：缺少圖片或分析資料')));
               }
-              return NutritionLabelScreen(imagePath: imagePath);
+              return NutritionLabelScreen(
+                imagePath: data['imagePath'],
+                analysis: data['analysis'],
+              );
             },
           ),
           // 參考測量頁面

@@ -1,7 +1,11 @@
+// ----- [pages/home/home_page.dart] 開始 -----
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../data/models/health_models.dart';
+import '../../../../models/nutrient_data.dart';
+import '../../../../data/models/chat_message.dart';
+import '../../../../core/services/api/socket_service.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import 'dart:async';
 
 class HomePageContent extends StatefulWidget {
   const HomePageContent({super.key});
@@ -26,9 +30,64 @@ class _HomePageContentState extends State<HomePageContent> {
     NutrientData('膳食纖維', 15, Colors.grey[400]!), // 膳食纖維 15% - 灰色
   ];
 
+  // Socket.IO 相關狀態
+  final SocketService _socketService = SocketService();
+  bool _isConnected = false;
+  bool _isConnecting = false;
+  StreamSubscription<bool>? _connectionSubscription;
+  StreamSubscription<Map<String, dynamic>>? _responseSubscription;
+
   // ====================================================================
   // 首頁建構方法和主要 UI
   // ====================================================================
+  @override
+  void initState() {
+    super.initState();
+    _initializeSocket();
+  }
+
+  @override
+  void dispose() {
+    _connectionSubscription?.cancel();
+    _responseSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// 初始化 Socket.IO 連接
+  void _initializeSocket() async {
+    // 監聽連接狀態
+    _connectionSubscription = _socketService.connectionStatus.listen((connected) {
+      if (mounted) {
+        setState(() {
+          _isConnected = connected;
+          _isConnecting = false;
+        });
+      }
+    });
+
+    // 監聽 RAG 回應
+    _responseSubscription = _socketService.ragResponses.listen((response) {
+      if (mounted) {
+        _handleRagResponse(response);
+      }
+    });
+
+    // 嘗試連接
+    setState(() {
+      _isConnecting = true;
+    });
+
+    final connected = await _socketService.connect();
+    if (!connected && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('無法連接到 AI 服務，請檢查網路連接'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
   /// 建構首頁使用者介面 - 顯示營養追蹤和健康概覽
   @override
   Widget build(BuildContext context) {
@@ -72,20 +131,21 @@ class _HomePageContentState extends State<HomePageContent> {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // 每日熱量目標
             _buildCalorieSection(),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             // 宏量熱量比例
             _buildMacroSection(),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
 
             // 個人化飲食建議
             _buildAISection(),
+            const SizedBox(height: 20), // 底部額外間距
           ],
         ),
       ),
@@ -217,9 +277,11 @@ class _HomePageContentState extends State<HomePageContent> {
           ),
         ),
 
-        // 測試功能區塊
-        const SizedBox(height: 15),
-        _buildTestSection(),
+        // 測試功能區塊 (僅在大螢幕上顯示)
+        if (MediaQuery.of(context).size.height > 700) ...[
+          const SizedBox(height: 15),
+          _buildTestSection(),
+        ],
       ],
     );
   }
@@ -229,8 +291,8 @@ class _HomePageContentState extends State<HomePageContent> {
     return Column(
       children: [
         Container(
-          width: 60,
-          height: 120,
+          width: 50,
+          height: 80,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(6),
             color: Colors.grey[200],
@@ -239,8 +301,8 @@ class _HomePageContentState extends State<HomePageContent> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Container(
-                width: 60,
-                height: (120 * nutrient.percentage / 100).clamp(0, 120),
+                width: 50,
+                height: (80 * nutrient.percentage / 100).clamp(0, 80),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(6),
                   color: nutrient.color,
@@ -314,7 +376,7 @@ class _HomePageContentState extends State<HomePageContent> {
   // AI 建議區塊
   Widget _buildAISection() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -337,15 +399,15 @@ class _HomePageContentState extends State<HomePageContent> {
               color: Colors.grey[800],
             ),
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 12),
 
           Row(
             children: [
               Container(
-                width: 50,
-                height: 50,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
+                  borderRadius: BorderRadius.circular(20),
                   image: const DecorationImage(
                     image: NetworkImage(
                         'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150'),
@@ -376,37 +438,53 @@ class _HomePageContentState extends State<HomePageContent> {
               ),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 12),
 
-          // 問題輸入區域
+          // 問題輸入區域 - 顯示連接狀態
           GestureDetector(
-            onTap: () {
+            onTap: _isConnected ? () {
               _showQuestionDialog();
-            },
+            } : null,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.grey[50],
+                color: _isConnected ? Colors.grey[50] : Colors.grey[100],
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
+                border: Border.all(
+                  color: _isConnected ? Colors.grey[200]! : Colors.grey[300]!,
+                ),
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
-                      '有什麼營養問題想諮詢嗎？',
+                      _isConnecting
+                          ? '正在連接 AI 服務...'
+                          : _isConnected
+                              ? '有什麼營養問題想諮詢嗎？'
+                              : '無法連接到 AI 服務',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey[500],
+                        color: _isConnected ? Colors.grey[500] : Colors.grey[400],
                       ),
                     ),
                   ),
-                  Icon(
-                    Icons.mic_outlined,
-                    color: Colors.grey[400],
-                    size: 24,
-                  ),
+                  if (_isConnecting)
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.grey[400],
+                      ),
+                    )
+                  else
+                    Icon(
+                      _isConnected ? Icons.mic_outlined : Icons.wifi_off_outlined,
+                      color: _isConnected ? Colors.grey[400] : Colors.red[300],
+                      size: 24,
+                    ),
                 ],
               ),
             ),
@@ -530,21 +608,152 @@ class _HomePageContentState extends State<HomePageContent> {
     );
   }
 
-  // 處理 AI 問題 - 預留給 RAG 整合
+  // 處理 AI 問題 - 透過 Socket.IO 發送到 RAG 系統
   void _handleAIQuestion(String question) {
-    // TODO: 整合 RAG 系統來處理問題
-    // 目前只顯示確認訊息
+    if (!_isConnected) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('無法發送問題，請檢查網路連接'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
+    // 顯示正在處理的提示
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('已收到您的問題：$question'),
+        content: Text('正在處理您的問題：$question'),
         backgroundColor: Colors.blue,
         duration: const Duration(seconds: 2),
       ),
     );
 
-    // 未來在這裡調用 RAG API
-    // String response = await ragService.getResponse(question);
-    // _showAIResponse(question, response);
+    // 透過 Socket.IO 發送問題到 RAG 系統
+    _socketService.sendRagQuestion(question);
+  }
+
+  // 處理 RAG 回應
+  void _handleRagResponse(Map<String, dynamic> response) {
+    if (response['error'] == true) {
+      // 處理錯誤回應
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('AI 處理錯誤：${response['message']}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } else {
+      // 處理正常回應
+      final aiResponse = response['response'] ?? response['message'] ?? '收到回應';
+      _showAIResponse(response['question'] ?? '您的問題', aiResponse);
+    }
+  }
+
+  // 顯示 AI 回應對話框
+  void _showAIResponse(String question, String response) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: Colors.blue[100],
+                ),
+                child: Icon(
+                  Icons.smart_toy,
+                  color: Colors.blue[700],
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'AI 健康助手回應',
+                style: TextStyle(fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '您的問題：',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      question,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 15),
+              Text(
+                'AI 回應：',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                response,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[800],
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('關閉'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showQuestionDialog();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('繼續提問'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
+
+// ====================================================================
+// ----- [pages/home/home_page.dart] 結束 -----

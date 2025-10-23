@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:io';
-import '../../../../data/services/ai_analysis_service.dart';
+import '../../../../core/services/api/api_services.dart';
 
 /// 多張圖片處理頁面
 class MultipleImagesProcessingPage extends StatefulWidget {
@@ -272,7 +272,7 @@ class _MultipleImagesProcessingPageState extends State<MultipleImagesProcessingP
           final imageFile = File(widget.images[i].path);
 
           // 調用 Flask API 進行分析
-          final result = await AIAnalysisService.analyzeImage(imageFile);
+          final result = await YoloApiService.analyzeImage(imageFile);
 
           // 保存分析結果
           _analysisResults[i] = result;
