@@ -2,6 +2,7 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services"
 }
 
 def localProperties = new Properties()
@@ -23,7 +24,7 @@ if (flutterVersionName == null) {
 }
 
 android {
-    namespace "com.example.flutter_application_1"
+    namespace "com.foodtracker.nutritionapp"
     compileSdk flutter.compileSdkVersion
     ndkVersion flutter.ndkVersion
 
@@ -42,7 +43,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId "com.example.flutter_application_1"
+        applicationId "com.foodtracker.nutritionapp"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
         minSdkVersion 21
@@ -64,4 +65,19 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    // Import the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:34.4.0')
+
+    // Firebase Analytics
+    implementation 'com.google.firebase:firebase-analytics'
+
+    // Firebase Auth (if you need authentication)
+    implementation 'com.google.firebase:firebase-auth'
+
+    // Firebase Firestore (for database)
+    implementation 'com.google.firebase:firebase-firestore'
+
+    // Firebase Storage (for file storage)
+    implementation 'com.google.firebase:firebase-storage'
+}

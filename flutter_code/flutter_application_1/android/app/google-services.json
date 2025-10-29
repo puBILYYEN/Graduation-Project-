@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "459965557703",
+    "project_id": "fooddata-92fa8",
+    "storage_bucket": "fooddata-92fa8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:459965557703:android:7ce99ccd25221369b887e2",
+        "android_client_info": {
+          "package_name": "com.foodtracker.nutritionapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3bDYoQqlXzfEmnCwJbrhexAr24O05BZI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
