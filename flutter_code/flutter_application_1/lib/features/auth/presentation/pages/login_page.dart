@@ -3,6 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodels/login_view_model.dart';
+import '../../domain/usecases/sign_in_usecase.dart';
+import '../../domain/usecases/google_sign_in_usecase.dart';
+import '../../domain/repositories/auth_repository.dart';
 
 /// 登入頁面 - 現在是一個 StatelessWidget，專注於 UI 顯示
 class LoginPage extends StatelessWidget {
@@ -12,25 +15,69 @@ class LoginPage extends StatelessWidget {
   Widget build(BuildContext context) {
     // 使用 ChangeNotifierProvider 來建立和提供 LoginViewModel
     return ChangeNotifierProvider(
-      create: (_) => LoginViewModel(),
+      create: (context) {
+        final authRepository = context.read<AuthRepository>();
+        return LoginViewModel(
+          SignInUseCase(authRepository),
+          GoogleSignInUseCase(authRepository),
+        );
+      },
       child: const _LoginView(), // 將 UI 實作部分拆分出去
     );
   }
 }
 
-/// 登入頁面的 UI 視圖
-class _LoginView extends StatelessWidget {
+/// 登入頁面的 UI 實作部分 - 內部 Widget，專注於 UI 顯示和使用者互動
+class _LoginView extends StatefulWidget {
   const _LoginView();
 
   @override
-  Widget build(BuildContext context) {
-    // 表單驗證鍵
-    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
-    // 文字輸入控制器
-    final TextEditingController usernameController = TextEditingController();
-    final TextEditingController passwordController = TextEditingController();
+  State<_LoginView> createState() => _LoginViewState();
+}
 
-    // 使用 Consumer 來監聽 LoginViewModel 的變化
+/// 登入頁面狀態管理類別 - 處理使用者登入流程和表單驗證
+class _LoginViewState extends State<_LoginView> {
+  // 文字輸入控制器：管理 Email 輸入框的文字內容
+  final TextEditingController _emailController = TextEditingController();
+
+  // 文字輸入控制器：管理密碼輸入框的文字內容
+  final TextEditingController _passwordController = TextEditingController();
+
+  // 表單驗證鍵：用於觸發整個登入表單的驗證
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
+  // 密碼可見性控制：true 表示密碼以明文顯示
+  bool _isPasswordVisible = false;
+
+  /// 處理使用者登入流程 - 驗證表單並執行登入邏輯
+  void _handleLogin(LoginViewModel viewModel) async {
+    // 驗證所有表單輸入：檢查必填欄位和格式是否正確
+    if (!_formKey.currentState!.validate()) return;
+
+    // 調用ViewModel的登入方法
+    final success = await viewModel.signIn(
+      _emailController.text.trim(),
+      _passwordController.text,
+    );
+
+    if (success && mounted) {
+      // 登入成功，導航到主頁面
+      context.go('/home');
+    }
+  }
+
+  /// 處理 Google 登入
+  void _handleGoogleLogin(LoginViewModel viewModel) async {
+    final success = await viewModel.signInWithGoogle();
+
+    if (success && mounted) {
+      // 登入成功，導航到主頁面
+      context.go('/home');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Consumer<LoginViewModel>(
       builder: (context, viewModel, child) {
         return Scaffold(
@@ -40,94 +87,199 @@ class _LoginView extends StatelessWidget {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(32.0),
                 child: Form(
-                  key: formKey,
+                  key: _formKey,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      // ... (頭像和標題部分與之前相同，保持不變)
+                      // Logo區域
                       Container(
-                        width: 120, height: 120,
+                        width: 120,
+                        height: 120,
                         decoration: BoxDecoration(
                           color: Colors.blue,
                           borderRadius: BorderRadius.circular(60),
                         ),
-                        child: const Icon(Icons.person, size: 60, color: Colors.white),
+                        child: const Icon(
+                          Icons.restaurant_menu,
+                          size: 60,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(height: 32),
-                      const Text('歡迎回來', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87)),
-                      const SizedBox(height: 8),
-                      const Text('請輸入您的帳號資訊', style: TextStyle(fontSize: 16, color: Colors.grey)),
-                      const SizedBox(height: 8),
-                      const Text('測試帳號: test\n測試密碼: 123456', style: TextStyle(fontSize: 14, color: Colors.blue), textAlign: TextAlign.center),
-                      const SizedBox(height: 32),
 
-                      // 帳號輸入欄位
+                      // 歡迎文字
+                      const Text(
+                        '歡迎回來',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '請登入您的帳號',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      // Display test credentials for debugging
+                      Container(
+                        padding: const EdgeInsets.all(12.0),
+                        decoration: BoxDecoration(
+                          color: Colors.yellow.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '開發測試用帳號',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text('Email: test@test.com', style: TextStyle(fontSize: 13, color: Colors.black54)),
+                            SizedBox(height: 4),
+                            Text('密碼: 123456', style: TextStyle(fontSize: 13, color: Colors.black54)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Email輸入框
                       TextFormField(
-                        controller: usernameController,
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          labelText: '帳號',
-                          hintText: '請輸入您的帳號',
-                          prefixIcon: const Icon(Icons.person_outline),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          labelText: 'Email',
+                          hintText: '請輸入您的Email',
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return '請輸入帳號';
+                          if (value == null || value.isEmpty) {
+                            return '請輸入Email';
+                          }
+                          // 簡單的Email格式檢查
+                          if (!value.contains('@') || !value.contains('.')) {
+                            return '請輸入有效的Email格式';
+                          }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
 
-                      // 密碼輸入欄位 (需要一個 StatefulWidget 來管理 _isPasswordVisible)
-                      // 為了簡化，我們先將其轉換為一個小的 StatefulWidget
-                      const _PasswordFormField(),
-
+                      // 密碼輸入框
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: !_isPasswordVisible,
+                        decoration: InputDecoration(
+                          labelText: '密碼',
+                          hintText: '請輸入您的密碼',
+                          prefixIcon: const Icon(Icons.lock_outline),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return '請輸入密碼';
+                          }
+                          if (value.length < 6) {
+                            return '密碼至少需要6個字元';
+                          }
+                          return null;
+                        },
+                      ),
                       const SizedBox(height: 24),
 
-                      // 主要登入按鈕
+                      // 登入按鈕
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: viewModel.isLoading ? null : () => viewModel.handleLogin(context, formKey),
+                          onPressed: viewModel.isLoading ? null : () => _handleLogin(viewModel),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
                           ),
                           child: viewModel.isLoading
-                              ? const CircularProgressIndicator(color: Colors.white)
-                              : const Text('登入', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              ? const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                            Colors.white),
+                                      ),
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text('登入中...'),
+                                  ],
+                                )
+                              : const Text(
+                                  '登入',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 16),
 
-                      // ... (分隔線和 Google 登入按鈕)
-                      const Row(
-                        children: [
-                          Expanded(child: Divider()),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16),
-                            child: Text('或者', style: TextStyle(color: Colors.grey)),
-                          ),
-                          Expanded(child: Divider()),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                      // Google 登入按鈕
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: OutlinedButton.icon(
-                          onPressed: viewModel.isGoogleLoading ? null : () => viewModel.handleGoogleSignIn(context),
-                          icon: viewModel.isGoogleLoading
-                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                              : Image.asset('assets/google_logo.png', width: 20, height: 20, errorBuilder: (context, error, stackTrace) => const Icon(Icons.login, size: 20)),
-                          label: Text(
-                            viewModel.isGoogleLoading ? '登入中...' : '使用 Google 登入',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                          ),
+                          onPressed: viewModel.isLoading ? null : () => _handleGoogleLogin(viewModel),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.grey),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            side: BorderSide(color: viewModel.isLoading ? Colors.grey : Colors.red),
+                          ),
+                          icon: Icon(
+                            Icons.login,
+                            color: viewModel.isLoading ? Colors.grey : Colors.red,
+                          ),
+                          label: Text(
+                            '使用 Google 登入',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: viewModel.isLoading ? Colors.grey : Colors.red,
+                            ),
                           ),
                         ),
                       ),
@@ -137,10 +289,15 @@ class _LoginView extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('還沒有帳號？ ', style: TextStyle(color: Colors.grey)),
+                          const Text('還沒有帳號？'),
                           TextButton(
-                            onPressed: () => context.push('/register'),
-                            child: const Text('註冊', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                            onPressed: () {
+                              context.go('/register');
+                            },
+                            child: const Text(
+                              '立即註冊',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ],
                       ),
@@ -154,43 +311,11 @@ class _LoginView extends StatelessWidget {
       },
     );
   }
-}
-
-/// 一個小的 StatefulWidget，專門用來管理密碼欄位的可見性狀態
-class _PasswordFormField extends StatefulWidget {
-  const _PasswordFormField();
 
   @override
-  State<_PasswordFormField> createState() => _PasswordFormFieldState();
-}
-
-class _PasswordFormFieldState extends State<_PasswordFormField> {
-  bool _isPasswordVisible = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      // controller 應該從父級傳遞下來，但為簡化暫時省略
-      obscureText: !_isPasswordVisible,
-      decoration: InputDecoration(
-        labelText: '密碼',
-        hintText: '請輸入您的密碼',
-        prefixIcon: const Icon(Icons.lock_outline),
-        suffixIcon: IconButton(
-          icon: Icon(_isPasswordVisible ? Icons.visibility : Icons.visibility_off),
-          onPressed: () {
-            setState(() {
-              _isPasswordVisible = !_isPasswordVisible;
-            });
-          },
-        ),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) return '請輸入密碼';
-        if (value.length < 6) return '密碼長度至少需要6個字元';
-        return null;
-      },
-    );
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

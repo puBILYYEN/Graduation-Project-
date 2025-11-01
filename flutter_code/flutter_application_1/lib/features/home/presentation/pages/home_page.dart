@@ -1,8 +1,8 @@
 // ----- [pages/home/home_page.dart] 開始 -----
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../../../models/nutrient_data.dart';
-import '../../../../data/models/chat_message.dart';
+import '../../../nutrition/data/models/nutrient_data.dart';
+import '../../data/models/chat_message.dart';
 import '../../../../core/services/api/socket_service.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import 'dart:async';
@@ -92,10 +92,10 @@ class _HomePageContentState extends State<HomePageContent> {
   @override
   Widget build(BuildContext context) {
     // 鎖定首頁為豎螢幕：確保用戶體驗一致性
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp, // 允許正向直立
-      DeviceOrientation.portraitDown, // 允許倒向直立
-    ]);
+    // SystemChrome.setPreferredOrientations([
+    //   DeviceOrientation.portraitUp, // 允許正向直立
+    //   DeviceOrientation.portraitDown, // 允許倒向直立
+    // ]);
 
     return Scaffold(
       backgroundColor: Colors.grey[50], // 設定頁面背景為淺灰色

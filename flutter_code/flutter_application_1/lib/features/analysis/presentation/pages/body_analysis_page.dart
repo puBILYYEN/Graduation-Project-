@@ -1,41 +1,37 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import '../../../../data/models/health_models.dart';
+import 'package:flutter/services.dart'; // Added
+import 'package:provider/provider.dart';
 
-// ====================================================================
-// 身體素質分析頁面 (Body Analysis Page)
-// ====================================================================
-class BodyAnalysisPageContent extends StatefulWidget {
+import '../viewmodels/body_analysis_viewmodel.dart';
+import '../../domain/usecases/get_body_metrics_usecase.dart';
+import '../../domain/usecases/update_body_metrics_usecase.dart';
+import '../../domain/entities/body_metrics.dart';
+
+class BodyAnalysisPage extends StatelessWidget {
+  const BodyAnalysisPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) {
+        final viewModel = BodyAnalysisViewModel(
+          context.read<GetBodyMetricsUseCase>(),
+          context.read<UpdateBodyMetricsUseCase>(),
+        );
+        viewModel.fetchBodyMetrics(); // Call fetchBodyMetrics on the viewModel instance
+        return viewModel;
+      },
+      child: const BodyAnalysisPageContent(),
+    );
+  }
+}
+
+class BodyAnalysisPageContent extends StatelessWidget {
   const BodyAnalysisPageContent({super.key});
 
   @override
-  State<BodyAnalysisPageContent> createState() =>
-      _BodyAnalysisPageContentState();
-}
-
-class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
-  String selectedPeriod = '週';
-
-  // 身體素質數據
-  BodyMetrics bodyMetrics = BodyMetrics(
-    sleepHours: 8,
-    sleepChange: 10,
-    height: 175,
-    heightChange: 0,
-    weight: 65,
-    weightChange: -1.2,
-    heartRate: 70,
-    heartRateChange: -2,
-    bloodPressure: '120/80',
-    bloodPressureChange: 1,
-  );
-
-  // ====================================================================
-  // 身體分析頁面主要 UI
-  // ====================================================================
-  @override
   Widget build(BuildContext context) {
-    // 鎖定身體分析頁面為豎螢幕
+    // Lock the screen to portrait mode
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -62,43 +58,31 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 頂部標籤區域
-            _buildTopTags(),
-
-            // 時間段選擇
-            _buildPeriodSelector(),
-
-            // 整體身體素質分析
-            _buildOverallAnalysis(),
-
-            // 身體指標卡片
-            _buildMetricsCards(),
-
-            // 年齡層級比較
-            _buildAgeComparison(),
-
-            // 建議
-            _buildRecommendations(),
-
-            // 測試功能區塊
-            _buildTestSection(),
-
-            const SizedBox(height: 20),
-          ],
-        ),
+      body: Consumer<BodyAnalysisViewModel>(
+        builder: (context, viewModel, child) {
+          if (viewModel.isLoading || viewModel.bodyMetrics == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopTags(),
+                _buildPeriodSelector(context, viewModel),
+                _buildOverallAnalysis(),
+                _buildMetricsCards(viewModel.bodyMetrics!),
+                _buildAgeComparison(),
+                _buildRecommendations(),
+                _buildTestSection(context, viewModel),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  // ====================================================================
-  // 身體分析頁面 UI 組件
-  // ====================================================================
-
-  // 頂部標籤
   Widget _buildTopTags() {
     return Container(
       color: Colors.white,
@@ -137,29 +121,26 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
     );
   }
 
-  // 時間段選擇器
-  Widget _buildPeriodSelector() {
+  Widget _buildPeriodSelector(BuildContext context, BodyAnalysisViewModel viewModel) {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildPeriodButton('天'),
-          _buildPeriodButton('週'),
-          _buildPeriodButton('月'),
+          _buildPeriodButton(context, viewModel, '天'),
+          _buildPeriodButton(context, viewModel, '週'),
+          _buildPeriodButton(context, viewModel, '月'),
         ],
       ),
     );
   }
 
-  Widget _buildPeriodButton(String period) {
-    bool isSelected = selectedPeriod == period;
+  Widget _buildPeriodButton(BuildContext context, BodyAnalysisViewModel viewModel, String period) {
+    bool isSelected = viewModel.selectedPeriod == period;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          selectedPeriod = period;
-        });
+        viewModel.setSelectedPeriod(period);
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 8),
@@ -180,7 +161,6 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
     );
   }
 
-  // 整體分析
   Widget _buildOverallAnalysis() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -198,16 +178,16 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+        children: const [
+          Text(
             '整體身體素質分析',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             '您的身體素質分析顯示您在睡眠品質、身高、體重、心率和血壓方面的重要參數。您的身體素質在您的年齡層級中處於平均水平，特別是在睡眠品質方面表現出色。',
             style: TextStyle(
               fontSize: 14,
@@ -220,8 +200,7 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
     );
   }
 
-  // 指標卡片組
-  Widget _buildMetricsCards() {
+  Widget _buildMetricsCards(BodyMetrics bodyMetrics) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -266,13 +245,12 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildBloodPressureCard(),
+          _buildBloodPressureCard(bodyMetrics),
         ],
       ),
     );
   }
 
-  // 單一指標卡片
   Widget _buildMetricCard(String title, String value, double change) {
     Color changeColor = change > 0
         ? Colors.green
@@ -324,8 +302,7 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
     );
   }
 
-  // 血壓卡片
-  Widget _buildBloodPressureCard() {
+  Widget _buildBloodPressureCard(BodyMetrics bodyMetrics) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -366,7 +343,6 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
     );
   }
 
-  // 年齡比較區塊
   Widget _buildAgeComparison() {
     return Container(
       margin: const EdgeInsets.all(16),
@@ -384,16 +360,16 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+        children: const [
+          Text(
             '與年齡層級的比較',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             '您的睡眠品質高於同年齡級的平均水平，而身高、體重、心率和血壓則處於平均水平。這表示睡眠方面的優勢，但也提示在體重和脂肪百分比方面可能需要調整。',
             style: TextStyle(
               fontSize: 14,
@@ -406,7 +382,6 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
     );
   }
 
-  // 建議區塊
   Widget _buildRecommendations() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -424,16 +399,16 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
+        children: const [
+          Text(
             '建議',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: 16),
+          Text(
             '為了維持睡眠品質並改善體重和脂肪百分比，可考慮增加肌力訓練、調整飲食以增加蛋白質攝取，並控制脂肪和糖分的攝取。',
             style: TextStyle(
               fontSize: 14,
@@ -446,8 +421,7 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
     );
   }
 
-  // 測試功能區塊
-  Widget _buildTestSection() {
+  Widget _buildTestSection(BuildContext context, BodyAnalysisViewModel viewModel) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
@@ -480,17 +454,16 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _buildTestButton('更新睡眠數據', () => _updateSleepData()),
-              _buildTestButton('更新體重數據', () => _updateWeightData()),
-              _buildTestButton('更新心率數據', () => _updateHeartRateData()),
-              _buildTestButton(
-                  '模擬 Power BI 同步', () => _updateBodyMetricsFromPowerBI()),
-              _buildTestButton('重置為默認值', () => _resetToDefault()),
+              _buildTestButton('更新睡眠數據', () => viewModel.updateSleepData()),
+              _buildTestButton('更新體重數據', () => viewModel.updateWeightData()),
+              _buildTestButton('更新心率數據', () => viewModel.updateHeartRateData()),
+              _buildTestButton('模擬 Power BI 同步', () => viewModel.updateBodyMetricsFromPowerBI()),
+              _buildTestButton('重置為默認值', () => viewModel.resetToDefault()),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            '當前數據來源：$selectedPeriod統計',
+            '當前數據來源：${viewModel.selectedPeriod}統計',
             style: TextStyle(
               fontSize: 11,
               color: Colors.blue[600],
@@ -514,103 +487,5 @@ class _BodyAnalysisPageContentState extends State<BodyAnalysisPageContent> {
       ),
       child: Text(label),
     );
-  }
-
-  // ====================================================================
-  // 身體分析功能方法
-  // ====================================================================
-
-  // 更新睡眠數據
-  /// 更新睡眠數據 - 模擬從睡眠感測器獲取的睡眠時間數據
-  void _updateSleepData() {
-    setState(() {
-      // 更新身體指標：設定新的睡眠時間為 9 小時，變化率為 +25%
-      bodyMetrics = BodyMetrics(
-        sleepHours: 9, // 設定睡眠時間為 9 小時
-        sleepChange: 25.0, // 睡眠時間增加 25%
-        height: bodyMetrics.height, // 保持原有身高數據
-        heightChange: bodyMetrics.heightChange, // 保持原有身高變化數據
-        weight: bodyMetrics.weight, // 保持原有體重數據
-        weightChange: bodyMetrics.weightChange, // 保持原有體重變化數據
-        heartRate: bodyMetrics.heartRate, // 保持原有心率數據
-        heartRateChange: bodyMetrics.heartRateChange, // 保持原有心率變化數據
-        bloodPressure: bodyMetrics.bloodPressure, // 保持原有血壓數據
-        bloodPressureChange: bodyMetrics.bloodPressureChange, // 保持原有血壓變化數據
-      );
-    });
-  }
-
-  /// 更新體重數據 - 模擬從體重計感測器獲取的體重測量數據
-  void _updateWeightData() {
-    setState(() {
-      // 更新身體指標：設定新的體重為 62 公斤，變化率為 -4.8%
-      bodyMetrics = BodyMetrics(
-        sleepHours: bodyMetrics.sleepHours, // 保持原有睡眠數據
-        sleepChange: bodyMetrics.sleepChange, // 保持原有睡眠變化數據
-        height: bodyMetrics.height, // 保持原有身高數據
-        heightChange: bodyMetrics.heightChange, // 保持原有身高變化數據
-        weight: 62, // 設定體重為 62 公斤
-        weightChange: -4.8, // 體重減少 4.8%
-        heartRate: bodyMetrics.heartRate, // 保持原有心率數據
-        heartRateChange: bodyMetrics.heartRateChange, // 保持原有心率變化數據
-        bloodPressure: bodyMetrics.bloodPressure, // 保持原有血壓數據
-        bloodPressureChange: bodyMetrics.bloodPressureChange, // 保持原有血壓變化數據
-      );
-    });
-  }
-
-  /// 更新心率數據 - 模擬從心率感測器獲取的心跳監測數據
-  void _updateHeartRateData() {
-    setState(() {
-      // 更新身體指標：準備設定新的心率數據
-      bodyMetrics = BodyMetrics(
-        sleepHours: bodyMetrics.sleepHours, // 保持原有睡眠數據
-        sleepChange: bodyMetrics.sleepChange,
-        height: bodyMetrics.height,
-        heightChange: bodyMetrics.heightChange,
-        weight: bodyMetrics.weight,
-        weightChange: bodyMetrics.weightChange,
-        heartRate: 75,
-        heartRateChange: 7.1,
-        bloodPressure: bodyMetrics.bloodPressure,
-        bloodPressureChange: bodyMetrics.bloodPressureChange,
-      );
-    });
-  }
-
-  // 模擬 Power BI 同步
-  void _updateBodyMetricsFromPowerBI() {
-    setState(() {
-      bodyMetrics = BodyMetrics(
-        sleepHours: 8,
-        sleepChange: 15.0,
-        height: 175,
-        heightChange: 0,
-        weight: 63,
-        weightChange: -3.1,
-        heartRate: 68,
-        heartRateChange: -2.9,
-        bloodPressure: '118/78',
-        bloodPressureChange: -1.5,
-      );
-    });
-  }
-
-  // 重置為默認值
-  void _resetToDefault() {
-    setState(() {
-      bodyMetrics = BodyMetrics(
-        sleepHours: 8,
-        sleepChange: 10,
-        height: 175,
-        heightChange: 0,
-        weight: 65,
-        weightChange: -1.2,
-        heartRate: 70,
-        heartRateChange: -2,
-        bloodPressure: '120/80',
-        bloodPressureChange: 1,
-      );
-    });
   }
 }

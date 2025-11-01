@@ -10,10 +10,13 @@ import 'package:provider/provider.dart';
 // 導入新的路由和服務管理
 import 'core/router/app_router.dart';
 import 'core/services/camera_service.dart';
-import 'core/services/auth_service.dart';
+// import 'core/services/auth_service.dart'; // Moved to feature-specific data layer
 import 'core/services/firestore_service.dart';
+import 'features/auth/domain/repositories/auth_repository.dart';
+import 'features/auth/data/repositories/auth_repository_impl.dart';
+import 'features/auth/data/datasources/firebase_auth_datasource.dart';
 
-import 'core/services/api_service.dart';
+// import 'core/services/api_service.dart'; // 已棄用，功能由 YoloApiService 等具體服務取代
 
 import 'firebase_options.dart';
 
@@ -72,14 +75,88 @@ class MyApp extends StatelessWidget {
     // 使用 MultiProvider 建立我們的「武器庫」
     return MultiProvider(
       providers: [
-        // 1. 提供相機服務
+        // =======================================
+        // Core Services
+        // =======================================
         Provider<CameraService>.value(value: cameraService),
-        // 2. 提供認證服務
-        Provider<AuthService>(create: (_) => AuthService()),
-        // 3. 提供 Firestore 服務
         Provider<FirestoreService>(create: (_) => FirestoreService()),
-        // 4. 提供 API 服務
-        Provider<ApiService>(create: (_) => ApiService()),
+
+        // =======================================
+        // Datasources
+        // =======================================
+        Provider<FirebaseAuthDatasource>(create: (_) => FirebaseAuthDatasource()),
+        Provider<CameraDatasource>(create: (_) => CameraDatasource()),
+        Provider<ImageProcessingDatasource>(create: (_) => ImageProcessingDatasource()),
+
+        // =======================================
+        // Repositories
+        // =======================================
+        Provider<AuthRepository>(
+          create: (context) => AuthRepositoryImpl(context.read<FirebaseAuthDatasource>()),
+        ),
+        Provider<FoodDiaryRepository>(
+          create: (_) => MockFoodDiaryRepositoryImpl(),
+        ),
+        Provider<CameraRepository>(
+          create: (context) => CameraRepositoryImpl(
+            context.read<CameraDatasource>(),
+            context.read<ImageProcessingDatasource>(),
+          ),
+        ),
+
+        // =======================================
+        // UseCases
+        // =======================================
+        // Food Diary
+        Provider<GetFoodEntriesUseCase>(
+          create: (context) => GetFoodEntriesUseCase(context.read<FoodDiaryRepository>()),
+        ),
+        Provider<AddFoodEntryUseCase>(
+          create: (context) => AddFoodEntryUseCase(context.read<FoodDiaryRepository>()),
+        ),
+        // Camera
+        Provider<GetAvailableCamerasUseCase>(
+          create: (context) => GetAvailableCamerasUseCase(context.read<CameraRepository>()),
+        ),
+        Provider<InitializeCameraUseCase>(
+          create: (context) => InitializeCameraUseCase(context.read<CameraRepository>()),
+        ),
+        Provider<TakePictureUseCase>(
+          create: (context) => TakePictureUseCase(context.read<CameraRepository>()),
+        ),
+        Provider<ToggleFlashUseCase>(
+          create: (context) => ToggleFlashUseCase(context.read<CameraRepository>()),
+        ),
+        Provider<PickImagesFromGalleryUseCase>(
+          create: (context) => PickImagesFromGalleryUseCase(context.read<CameraRepository>()),
+        ),
+        Provider<AnalyzeImageUseCase>(
+          create: (context) => AnalyzeImageUseCase(context.read<CameraRepository>()),
+        ),
+        Provider<PerformVolumeCalculationUseCase>(
+          create: (context) => PerformVolumeCalculationUseCase(context.read<CameraRepository>()),
+        ),
+
+        // =======================================
+        // ViewModels
+        // =======================================
+        ChangeNotifierProvider<FoodDiaryViewModel>(
+          create: (context) => FoodDiaryViewModel(
+            context.read<GetFoodEntriesUseCase>(),
+            context.read<AddFoodEntryUseCase>(),
+          ),
+        ),
+        ChangeNotifierProvider<CameraViewModel>(
+          create: (context) => CameraViewModel(
+            getAvailableCamerasUseCase: context.read<GetAvailableCamerasUseCase>(),
+            initializeCameraUseCase: context.read<InitializeCameraUseCase>(),
+            takePictureUseCase: context.read<TakePictureUseCase>(),
+            toggleFlashUseCase: context.read<ToggleFlashUseCase>(),
+            pickImagesFromGalleryUseCase: context.read<PickImagesFromGalleryUseCase>(),
+            analyzeImageUseCase: context.read<AnalyzeImageUseCase>(),
+            performVolumeCalculationUseCase: context.read<PerformVolumeCalculationUseCase>(),
+          ),
+        ),
       ],
       child: MaterialApp.router(
         title: '智慧營養追蹤應用程式',

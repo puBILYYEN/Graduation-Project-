@@ -10,13 +10,12 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'widgets/camera_controls.dart';
 import 'utils/edge_detection_painter.dart';
 import '../nutrition/nutrition_label_screen.dart';
+// Make sure that NutritionLabelScreen is defined in ../nutrition/nutrition_label_screen.dart
 import '../multi_image/multi_image_processing_screen.dart';
-import 'widgets/reference_measurement_page.dart';
 import '../../models/reference_object.dart';
-import '../../models/container_analysis.dart';
+import '../../models/container_analysis.dart' as ca;
 import '../../models/measurement.dart';
-import '../../widgets/custom_painters.dart';
-import 'package:flutter_application_1/core/services/logging/logger.dart';
+import 'package:flutter_application_1/features/measurement/presentation/widgets/custom_painters.dart';
 import 'package:flutter_application_1/core/services/api/api_services.dart';
 import 'dart:async';
 import 'dart:math' as math;
@@ -113,7 +112,7 @@ class _CameraScreenState extends State<CameraScreen>
   final TextEditingController _customWidthController = TextEditingController();
 
   // RAG 測試數據相關變數 (RAG Test Data Variables)
-  ContainerAnalysisData? _testAnalysisData; // 測試用的分析數據
+  ca.ContainerAnalysisData? _testAnalysisData; // 測試用的分析數據
   bool _showTestData = false; // 是否顯示測試數據
   Timer? _testDataTimer; // 測試數據更新計時器
   final TextEditingController _customHeightController = TextEditingController();
@@ -401,16 +400,16 @@ class _CameraScreenState extends State<CameraScreen>
   /// 初始化 RAG 系統測試數據
   void _initializeTestData() {
     // 創建模擬的容器分析數據，用於測試 RAG 系統
-    _testAnalysisData = ContainerAnalysisData(
+    _testAnalysisData = ca.ContainerAnalysisData(
       imagePath: '/data/user/0/app_flutter/test_container.jpg',
       timestamp: DateTime.now().toIso8601String(),
-      container: ContainerInfo(
+      container: ca.ContainerInfo(
         shape: '圓柱體',
         material: '塑膡',
         color: '透明',
         features: ['密封蓋', '測量刻度', '防滑底部'],
       ),
-      measurements: MeasurementResults(
+      measurements: ca.MeasurementResults(
         volume: 450.75,
         confidence: 0.85,
         method: '智能視覺測量',
@@ -420,7 +419,7 @@ class _CameraScreenState extends State<CameraScreen>
           '底部厚度': 0.8,
         },
       ),
-      metadata: AnalysisMetadata(
+      metadata: ca.AnalysisMetadata(
         deviceModel: 'RMX3867',
         appVersion: '1.0.0',
         processingTime: 2.3,
@@ -451,7 +450,7 @@ class _CameraScreenState extends State<CameraScreen>
       final newConfidence = 0.75 + random.nextDouble() * 0.2;
 
       // 創建新的測量結果
-      final newMeasurements = MeasurementResults(
+      final newMeasurements = ca.MeasurementResults(
         volume: double.parse(newVolume.toStringAsFixed(2)),
         confidence: double.parse(newConfidence.toStringAsFixed(2)),
         method: '智能視覺測量',
@@ -464,12 +463,12 @@ class _CameraScreenState extends State<CameraScreen>
 
       // 更新分析數據
       setState(() {
-        _testAnalysisData = ContainerAnalysisData(
+        _testAnalysisData = ca.ContainerAnalysisData(
           imagePath: _testAnalysisData!.imagePath,
           timestamp: DateTime.now().toIso8601String(),
           container: _testAnalysisData!.container,
           measurements: newMeasurements,
-          metadata: AnalysisMetadata(
+          metadata: ca.AnalysisMetadata(
             deviceModel: _testAnalysisData!.metadata.deviceModel,
             appVersion: _testAnalysisData!.metadata.appVersion,
             processingTime: 1.5 + random.nextDouble() * 2.0,
@@ -484,16 +483,16 @@ class _CameraScreenState extends State<CameraScreen>
   Future<void> _generateRagData(String imagePath, double volume) async {
     try {
       // 創建容器分析數據
-      final ragData = ContainerAnalysisData(
+      final ragData = ca.ContainerAnalysisData(
         imagePath: imagePath,
         timestamp: DateTime.now().toIso8601String(),
-        container: ContainerInfo(
+        container: ca.ContainerInfo(
           shape: _containerShape,
           material: '推測材質',
           color: '推測顏色',
           features: ['自動檢測特徵'],
         ),
-        measurements: MeasurementResults(
+        measurements: ca.MeasurementResults(
           volume: volume,
           confidence: 0.85,
           method: '智能視覺測量',
@@ -503,7 +502,7 @@ class _CameraScreenState extends State<CameraScreen>
             '高度': 12.0,
           },
         ),
-        metadata: AnalysisMetadata(
+        metadata: ca.AnalysisMetadata(
           deviceModel: 'RMX3867',
           appVersion: '1.0.0',
           processingTime: 2.1,
@@ -576,7 +575,7 @@ class _CameraScreenState extends State<CameraScreen>
   }
 
   /// 將 RAG 數據存儲到 Firebase Firestore
-  Future<void> _saveToFirestore(ContainerAnalysisData ragData) async {
+  Future<void> _saveToFirestore(ca.ContainerAnalysisData ragData) async {
     try {
       // 取得 Firestore 實例
       FirebaseFirestore firestore = FirebaseFirestore.instance;

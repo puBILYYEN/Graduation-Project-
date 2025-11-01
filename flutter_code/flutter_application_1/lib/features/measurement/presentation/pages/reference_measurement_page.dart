@@ -3,7 +3,8 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import '../../../../data/models/measurement_models.dart';
-import '../../../../domain/usecases/measurement_calculator.dart';
+import '../../../../data/models/reference_object.dart';
+import '../../domain/usecases/measurement_calculator.dart';
 import '../widgets/custom_painters.dart';
 
 /// 參考物體測量頁面
@@ -24,6 +25,7 @@ class ReferenceMeasurementPage extends StatefulWidget {
 class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
   // 測量狀態
   MeasurementMode _currentMode = MeasurementMode.calibration;
+  String _currentMeasurementType = 'length'; // 'length', 'area', 'volume'
   bool _isCalibrated = false;
   double _measurementScale = 1.0;
 
@@ -31,25 +33,25 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
   ReferenceObject? _selectedReferenceObject;
   final List<ReferenceObject> _availableReferences = [
     const ReferenceObject(
-      type: ReferenceObjectType.coin,
+      type: 'coin',
       name: '50元硬幣',
       width: 2.5,
       height: 2.5,
     ),
     const ReferenceObject(
-      type: ReferenceObjectType.coin,
+      type: 'coin',
       name: '10元硬幣',
       width: 2.0,
       height: 2.0,
     ),
     const ReferenceObject(
-      type: ReferenceObjectType.card,
+      type: 'card',
       name: '信用卡',
       width: 8.56,
       height: 5.398,
     ),
     const ReferenceObject(
-      type: ReferenceObjectType.utensil,
+      type: 'utensil',
       name: '標準湯匙',
       width: 15.0,
       height: 3.0,
@@ -74,9 +76,7 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
         case MeasurementMode.calibration:
           _handleCalibrationTap(position);
           break;
-        case MeasurementMode.length:
-        case MeasurementMode.area:
-        case MeasurementMode.volume:
+        case MeasurementMode.measurement:
           _handleMeasurementTap(position);
           break;
       }
@@ -87,8 +87,8 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
   void _handleCalibrationTap(Offset position) {
     if (_referencePoints.length < 2) {
       _referencePoints.add(MeasurementPoint(
-        position: position,
-        index: _referencePoints.length,
+        x: position.dx,
+        y: position.dy,
       ));
 
       if (_referencePoints.length == 2) {
@@ -98,8 +98,8 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
       // 重新校準
       _referencePoints.clear();
       _referencePoints.add(MeasurementPoint(
-        position: position,
-        index: 0,
+        x: position.dx,
+        y: position.dy,
       ));
       _isCalibrated = false;
     }
@@ -113,28 +113,26 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
     }
 
     _measurementPoints.add(MeasurementPoint(
-      position: position,
-      index: _measurementPoints.length,
+      x: position.dx,
+      y: position.dy,
     ));
 
     // 根據模式判斷是否自動計算
-    switch (_currentMode) {
-      case MeasurementMode.length:
+    switch (_currentMeasurementType) {
+      case 'length':
         if (_measurementPoints.length == 2) {
           _calculateLength();
         }
         break;
-      case MeasurementMode.area:
+      case 'area':
         if (_measurementPoints.length >= 3) {
           _calculateArea();
         }
         break;
-      case MeasurementMode.volume:
+      case 'volume':
         if (_measurementPoints.length >= 3) {
           _calculateVolume();
         }
-        break;
-      case MeasurementMode.calibration:
         break;
     }
   }
@@ -143,8 +141,8 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
   void _calculateScale() {
     if (_referencePoints.length == 2 && _selectedReferenceObject != null) {
       final pixelDistance = MeasurementCalculator.calculatePixelDistance(
-        _referencePoints[0].position,
-        _referencePoints[1].position,
+        _referencePoints[0].toOffset(),
+        _referencePoints[1].toOffset(),
       );
 
       // 使用參考物體的寬度作為實際距離
@@ -167,17 +165,20 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
   void _calculateLength() {
     if (_measurementPoints.length >= 2) {
       final distance = MeasurementCalculator.calculateRealDistance(
-        _measurementPoints[0].position,
-        _measurementPoints[1].position,
+        _measurementPoints[0].toOffset(),
+        _measurementPoints[1].toOffset(),
         _measurementScale,
       );
 
       final result = MeasurementResult(
-        mode: MeasurementMode.length,
-        value: distance,
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        type: _currentMeasurementType,
+        width: distance, // Assuming distance is width for length
+        height: 0.0, // Placeholder
+        volume: 0.0, // Placeholder
         unit: 'cm',
-        points: List.from(_measurementPoints),
-        scale: _measurementScale,
+        timestamp: DateTime.now(),
+        measurementPoints: List.from(_measurementPoints),
       );
 
       _results.add(result);
@@ -189,16 +190,19 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
   void _calculateArea() {
     if (_measurementPoints.length >= 3) {
       final area = MeasurementCalculator.calculatePolygonArea(
-        _measurementPoints.map((p) => p.position).toList(),
+        _measurementPoints.map((p) => p.toOffset()).toList(),
         _measurementScale,
       );
 
       final result = MeasurementResult(
-        mode: MeasurementMode.area,
-        value: area,
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        type: _currentMeasurementType,
+        width: area, // Assuming area is width for area
+        height: 0.0, // Placeholder
+        volume: 0.0, // Placeholder
         unit: 'cm',
-        points: List.from(_measurementPoints),
-        scale: _measurementScale,
+        timestamp: DateTime.now(),
+        measurementPoints: List.from(_measurementPoints),
       );
 
       _results.add(result);
@@ -210,16 +214,19 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
   void _calculateVolume() {
     if (_measurementPoints.length >= 3) {
       final volume = MeasurementCalculator.estimateVolume(
-        _measurementPoints.map((p) => p.position).toList(),
+        _measurementPoints.map((p) => p.toOffset()).toList(),
         _measurementScale,
       );
 
       final result = MeasurementResult(
-        mode: MeasurementMode.volume,
-        value: volume,
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        type: _currentMeasurementType,
+        width: 0.0, // Placeholder
+        height: 0.0, // Placeholder
+        volume: volume,
         unit: 'cm',
-        points: List.from(_measurementPoints),
-        scale: _measurementScale,
+        timestamp: DateTime.now(),
+        measurementPoints: List.from(_measurementPoints),
       );
 
       _results.add(result);
@@ -362,9 +369,9 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       _buildModeButton('校準', MeasurementMode.calibration, Icons.straighten),
-                      _buildModeButton('長度', MeasurementMode.length, Icons.linear_scale),
-                      _buildModeButton('面積', MeasurementMode.area, Icons.crop_free),
-                      _buildModeButton('體積', MeasurementMode.volume, Icons.view_in_ar),
+                      _buildModeButton('長度', MeasurementMode.measurement, Icons.linear_scale),
+                      _buildModeButton('面積', MeasurementMode.measurement, Icons.crop_free),
+                      _buildModeButton('體積', MeasurementMode.measurement, Icons.view_in_ar),
                     ],
                   ),
                 ],
@@ -478,6 +485,9 @@ class _ReferenceMeasurementPageState extends State<ReferenceMeasurementPage> {
       onTap: () {
         setState(() {
           _currentMode = mode;
+          if (mode == MeasurementMode.measurement) {
+            _currentMeasurementType = label.toLowerCase(); // Use label as type
+          }
           if (mode != MeasurementMode.calibration) {
             _measurementPoints.clear();
           }

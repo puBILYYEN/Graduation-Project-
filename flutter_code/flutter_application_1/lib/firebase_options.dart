@@ -41,12 +41,13 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'your-web-api-key',
-    appId: 'your-web-app-id',
-    messagingSenderId: 'your-messaging-sender-id',
+    apiKey: 'AIzaSyCk4GY-VkG4dd_zXP5HZQDlZbjdY0k0img',
+    appId: '1:459965557703:web:780d1a11870a3031b887e2',
+    messagingSenderId: '459965557703',
     projectId: 'fooddata-92fa8',
     authDomain: 'fooddata-92fa8.firebaseapp.com',
-    storageBucket: 'fooddata-92fa8.appspot.com',
+    storageBucket: 'fooddata-92fa8.firebasestorage.app',
+    measurementId: 'G-1CL7MQ3Q41',
   );
 
   static const FirebaseOptions android = FirebaseOptions(

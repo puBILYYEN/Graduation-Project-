@@ -1,73 +1,98 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import '../../domain/usecases/google_sign_in_usecase.dart';
+import '../../domain/usecases/sign_in_usecase.dart';
 
-import '../../../../core/services/auth_service.dart';
-import '../../../../core/services/logging/log_manager.dart';
-
-/// 管理登入頁面的狀態和業務邏輯
 class LoginViewModel extends ChangeNotifier {
-  // 一般登入載入狀態
+  final SignInUseCase _signInUseCase;
+  final GoogleSignInUseCase _googleSignInUseCase;
+
+  LoginViewModel(this._signInUseCase, this._googleSignInUseCase);
+
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // Google 登入載入狀態
   bool _isGoogleLoading = false;
   bool get isGoogleLoading => _isGoogleLoading;
 
-  // 更新一般登入載入狀態
   void _setIsLoading(bool value) {
     _isLoading = value;
-    notifyListeners(); // 通知監聽者狀態已改變
+    notifyListeners();
   }
 
-  // 更新 Google 登入載入狀態
   void _setIsGoogleLoading(bool value) {
     _isGoogleLoading = value;
-    notifyListeners(); // 通知監聽者狀態已改變
+    notifyListeners();
   }
 
-  /// 處理一般登入流程 (此處為範例，尚未與 Firebase 整合)
-  Future<void> handleLogin(BuildContext context, GlobalKey<FormState> formKey) async {
+  Future<void> handleLogin(
+    BuildContext context,
+    GlobalKey<FormState> formKey,
+    String email,
+    String password,
+  ) async {
     if (!formKey.currentState!.validate()) return;
 
     _setIsLoading(true);
-    await Future.delayed(const Duration(seconds: 1)); // 模擬網路請求
-    _setIsLoading(false);
-
-    // 注意：此處的直接導航在整合 Firebase 帳密登入後也應移除，
-    // 改為依賴 GoRouter 的 redirect。
-    if (context.mounted) {
-      // context.go('/home');
+    try {
+      await _signInUseCase(email, password);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      _setIsLoading(false);
     }
   }
 
-  /// 處理 Google 登入流程，委託給 AuthService
+  Future<bool> signIn(String email, String password) async {
+    // --- 開發/測試用後門 ---
+    if (email == 'test@test.com' && password == '123456') {
+      print('--- 開發者登入後門：成功 ---');
+      return true; // 模擬登入成功
+    }
+    // --- 後門結束 ---
+
+    _setIsLoading(true);
+    try {
+      final user = await _signInUseCase(email, password);
+      return user != null;
+    } catch (error) {
+      return false;
+    } finally {
+      _setIsLoading(false);
+    }
+  }
+
+  Future<bool> signInWithGoogle() async {
+    _setIsGoogleLoading(true);
+    try {
+      print('📱 ViewModel: 開始 Google 登入...');
+      final user = await _googleSignInUseCase();
+      if (user != null) {
+        print('🎉 ViewModel: Google 登入成功');
+        return true;
+      } else {
+        print('❌ ViewModel: Google 登入返回 null');
+        return false;
+      }
+    } catch (error) {
+      print('💥 ViewModel: Google 登入錯誤: $error');
+      return false;
+    } finally {
+      _setIsGoogleLoading(false);
+    }
+  }
+
   Future<void> handleGoogleSignIn(BuildContext context) async {
     _setIsGoogleLoading(true);
     try {
-      // 從 Provider 獲取 AuthService 實例
-      final authService = Provider.of<AuthService>(context, listen: false);
-      
-      // 呼叫服務中的登入方法
-      final user = await authService.signInWithGoogle();
-
-      if (user != null) {
-        await log('AuthService 登入成功: ${user.displayName}');
-        // 登入成功後，不需要手動導航。
-        // GoRouter 的 redirect 會自動偵測到登入狀態的改變並導航到 /home。
-      } else {
-        await log('AuthService 登入被使用者取消');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Google 登入已取消'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-      }
+      await _googleSignInUseCase();
     } catch (error) {
-      await log('AuthService 登入錯誤: $error');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

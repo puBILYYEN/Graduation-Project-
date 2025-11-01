@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../data/models/health_models.dart';
+import 'app_pages.dart';
 import 'home_page.dart';
-import '../../../analysis/presentation/pages/body_analysis_page.dart';
-import '../../../food_diary/presentation/pages/food_diary_page.dart';
-import '../../../camera/presentation/pages/smart_camera_page.dart';
 
 /// 統一主框架 Widget - 應用程式的主要容器，管理頁面切換和底部導航
 class MainFrame extends StatefulWidget {
@@ -11,6 +8,14 @@ class MainFrame extends StatefulWidget {
 
   @override
   State<MainFrame> createState() => _MainFrameState();
+}
+
+/// 頁面枚舉 - 定義應用程式中所有可用的主要頁面
+enum AppPage {
+  home,        // 首頁
+  foodDiary,   // 飲食記錄
+  exercise,    // 運動
+  analysis,    // 身體分析
 }
 
 /// MainFrame 的狀態管理類別
@@ -38,100 +43,88 @@ class _MainFrameState extends State<MainFrame> {
         return AppPage.home;
       case 1: // 索引 1 對應飲食記錄
         return AppPage.foodDiary;
-      case 3: // 索引 3 對應運動（跳過索引 2 的相機）
+      case 3: // 索引 3 對應運動
         return AppPage.exercise;
       case 4: // 索引 4 對應身體分析
         return AppPage.analysis;
-      default: // 預設情況返回首頁
+      default: // 預設返回首頁
         return AppPage.home;
     }
   }
 
-  /// 建立目前頁面的 Widget - 根據目前選中的頁面返回對應的內容 Widget
+  /// 根據當前頁面枚舉建構對應的 Widget
   Widget _buildCurrentPage() {
-    print('構建頁面: $_currentPage');
     switch (_currentPage) {
-      case AppPage.home: // 首頁情況
-        print('返回首頁內容');
-        return const HomePageContent(); // 返回首頁內容 Widget
-      case AppPage.foodDiary: // 飲食記錄情況
-        print('返回飲食日記內容');
-        return const FoodDiaryPageContent(); // 返回飲食記錄內容 Widget
-      case AppPage.exercise: // 運動頁面情況
-        print('返回運動頁面內容');
-        return const Center(
-            child: Text('運動頁面開發中...',
-                style: TextStyle(fontSize: 18))); // 臨時顯示開發中的提示
-      case AppPage.analysis: // 身體分析情況
-        print('返回身體分析內容');
-        return const BodyAnalysisPageContent(); // 返回身體分析內容 Widget
+      case AppPage.home: // 顯示首頁內容
+        return AppPages.getHomePage();
+      case AppPage.foodDiary: // 顯示飲食記錄頁面
+        return AppPages.getFoodDiaryPage();
+      case AppPage.exercise: // 顯示運動頁面
+        return AppPages.getExercisePage();
+      case AppPage.analysis: // 顯示身體分析頁面
+        return AppPages.getAnalysisPage();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    print('MainFrame build() 被調用，當前頁面: $_currentPage');
     return Scaffold(
+      // 主體內容區域 - 根據當前選中的頁面顯示對應內容
       body: _buildCurrentPage(),
+
+      // 底部導航欄 - 提供頁面切換功能
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _getNavigationIndex(),
+        type: BottomNavigationBarType.fixed, // 固定模式，所有標籤都會顯示
+        currentIndex: _getNavigationIndex(), // 目前選中的導航項目索引
+
+        // 導航項目點擊處理
         onTap: (index) {
-          print('導航欄點擊 - index: $index, 當前頁面: $_currentPage');
-          if (index == 2) {
-            print('跳轉到相機頁面');
-            // 相機頁面特殊處理 - 使用 push 而不是切換 tab
+          if (index == 2) { // 如果點擊的是相機按鈕（索引 2）
+            // 導航到相機頁面，而不是更新底部導航狀態
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SmartCameraScreen()),
+              MaterialPageRoute(builder: (context) => AppPages.getSmartCameraPage()),
             );
           } else {
-            // 映射導航索引到頁面枚舉
-            final newPage = _getPageFromNavigationIndex(index);
-            print('切換頁面: $_currentPage -> $newPage');
+            // 更新當前頁面狀態，觸發頁面重建
             setState(() {
+              AppPage newPage = _getPageFromNavigationIndex(index);
               _currentPage = newPage;
             });
-            print('setState 完成，當前頁面: $_currentPage');
           }
         },
-        backgroundColor: Colors.white, // 導航欄背景色為白色
-        selectedItemColor: Colors.black87, // 選中項目的顏色為深灰色
-        unselectedItemColor: Colors.grey[400], // 未選中項目的顏色為淺灰色
-        selectedFontSize: 12, // 選中項目的字體大小
-        unselectedFontSize: 12, // 未選中項目的字體大小
-        elevation: 0, // 陰影效果設為 0，去除高度感
+
+        // 導航項目列表
         items: const [
-          // 導航欄項目列表，定義所有導航選項
+          // 首頁導航項目
           BottomNavigationBarItem(
-            // 首頁導航項（索引 0）
-            icon: Icon(Icons.home_outlined), // 未選中時的空心家庭圖示
-            activeIcon: Icon(Icons.home), // 選中時的實心家庭圖示
-            label: '首頁', // 項目標籤文字
+            icon: Icon(Icons.home_outlined), // 未選中時的圖示
+            activeIcon: Icon(Icons.home), // 選中時的圖示
+            label: '首頁', // 標籤文字
           ),
+          // 飲食記錄導航項目
           BottomNavigationBarItem(
-            // 飲食記錄導航項（索引 1）
-            icon: Icon(Icons.restaurant_menu_outlined), // 未選中時的空心餐廳選單圖示
-            activeIcon: Icon(Icons.restaurant_menu), // 選中時的實心餐廳選單圖示
-            label: '飲食記錄', // 項目標籤文字
+            icon: Icon(Icons.restaurant_menu_outlined),
+            activeIcon: Icon(Icons.restaurant_menu),
+            label: '飲食記錄',
           ),
+          // 相機導航項目（特殊處理）
           BottomNavigationBarItem(
-            // 相機拍照導航項（索引 2）
-            icon: Icon(Icons.camera_alt_outlined), // 未選中時的空心相機圖示
-            activeIcon: Icon(Icons.camera_alt), // 選中時的實心相機圖示
-            label: '拍照辨識', // 項目標籤文字
+            icon: Icon(Icons.camera_alt_outlined),
+            activeIcon: Icon(Icons.camera_alt),
+            label: '相機',
           ),
+          // 運動導航項目
           BottomNavigationBarItem(
-            // 運動導航項（索引 3）
-            icon: Icon(Icons.fitness_center_outlined), // 未選中時的空心健身圖示
-            activeIcon: Icon(Icons.fitness_center), // 選中時的實心健身圖示
-            label: '運動', // 項目標籤文字
+            icon: Icon(Icons.fitness_center_outlined),
+            activeIcon: Icon(Icons.fitness_center),
+            label: '運動',
           ),
+          // 身體分析導航項目
           BottomNavigationBarItem(
-            // 身體分析導航項（索引 4）
-            icon: Icon(Icons.analytics_outlined), // 未選中時的空心分析圖示
-            activeIcon: Icon(Icons.analytics), // 選中時的實心分析圖示
-            label: '分析', // 項目標籤文字
+            icon: Icon(Icons.analytics_outlined),
+            activeIcon: Icon(Icons.analytics),
+            label: '身體分析',
           ),
         ],
       ),

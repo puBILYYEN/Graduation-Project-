@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 
 /// 可拖拽的測量框架 Widget
 class MeasurementFrame extends StatefulWidget {
@@ -44,8 +43,11 @@ class _MeasurementFrameState extends State<MeasurementFrame> {
           final screenSize = MediaQuery.of(context).size;
 
           // 使用預定義常數計算強化的安全區域
-          final double maxX = screenSize.width - widget.width - MeasurementFrame.SIDE_MARGIN;
-          final double maxY = screenSize.height - MeasurementFrame.BOTTOM_SAFE_ZONE - widget.height;
+          final double maxX =
+              screenSize.width - widget.width - MeasurementFrame.SIDE_MARGIN;
+          final double maxY = screenSize.height -
+              MeasurementFrame.BOTTOM_SAFE_ZONE -
+              widget.height;
           final double minX = MeasurementFrame.SIDE_MARGIN;
           final double minY = MeasurementFrame.TOP_SAFE_ZONE;
 
@@ -63,7 +65,8 @@ class _MeasurementFrameState extends State<MeasurementFrame> {
 
           // 多重安全檢查：確保測量框絕對不會覆蓋底部按鈕區域
           final double frameBottom = widget.posY + deltaY + widget.height;
-          final double safeBottomLimit = screenSize.height - MeasurementFrame.BOTTOM_SAFE_ZONE;
+          final double safeBottomLimit =
+              screenSize.height - MeasurementFrame.BOTTOM_SAFE_ZONE;
 
           if (frameBottom > safeBottomLimit) {
             deltaY = safeBottomLimit - widget.height - widget.posY;
@@ -94,7 +97,8 @@ class _MeasurementFrameState extends State<MeasurementFrame> {
                 // 中心標籤
                 Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.red.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(4),
@@ -138,23 +142,26 @@ class MeasurementFrameHelper {
   /// 計算居中位置
   static Offset calculateCenterPosition(Size screenSize, Size frameSize) {
     // 計算有效相機預覽區域（扣除頂部和底部安全區域）
-    final double availableWidth = screenSize.width - (2 * MeasurementFrame.SIDE_MARGIN);
+    final double availableWidth =
+        screenSize.width - (2 * MeasurementFrame.SIDE_MARGIN);
     final double availableHeight = screenSize.height -
-        MeasurementFrame.TOP_SAFE_ZONE - MeasurementFrame.BOTTOM_SAFE_ZONE;
+        MeasurementFrame.TOP_SAFE_ZONE -
+        MeasurementFrame.BOTTOM_SAFE_ZONE;
 
     // 計算居中位置
-    final double centerX = (availableWidth - frameSize.width) / 2 + MeasurementFrame.SIDE_MARGIN;
-    final double centerY = (availableHeight - frameSize.height) / 2 + MeasurementFrame.TOP_SAFE_ZONE;
+    final double centerX =
+        (availableWidth - frameSize.width) / 2 + MeasurementFrame.SIDE_MARGIN;
+    final double centerY = (availableHeight - frameSize.height) / 2 +
+        MeasurementFrame.TOP_SAFE_ZONE;
 
     return Offset(
-      centerX.clamp(
-        MeasurementFrame.SIDE_MARGIN,
-        screenSize.width - frameSize.width - MeasurementFrame.SIDE_MARGIN
-      ),
+      centerX.clamp(MeasurementFrame.SIDE_MARGIN,
+          screenSize.width - frameSize.width - MeasurementFrame.SIDE_MARGIN),
       centerY.clamp(
-        MeasurementFrame.TOP_SAFE_ZONE,
-        screenSize.height - MeasurementFrame.BOTTOM_SAFE_ZONE - frameSize.height
-      ),
+          MeasurementFrame.TOP_SAFE_ZONE,
+          screenSize.height -
+              MeasurementFrame.BOTTOM_SAFE_ZONE -
+              frameSize.height),
     );
   }
 
@@ -164,8 +171,8 @@ class MeasurementFrameHelper {
     final frameRight = position.dx + frameSize.width;
 
     return position.dx >= MeasurementFrame.SIDE_MARGIN &&
-           position.dy >= MeasurementFrame.TOP_SAFE_ZONE &&
-           frameRight <= screenSize.width - MeasurementFrame.SIDE_MARGIN &&
-           frameBottom <= screenSize.height - MeasurementFrame.BOTTOM_SAFE_ZONE;
+        position.dy >= MeasurementFrame.TOP_SAFE_ZONE &&
+        frameRight <= screenSize.width - MeasurementFrame.SIDE_MARGIN &&
+        frameBottom <= screenSize.height - MeasurementFrame.BOTTOM_SAFE_ZONE;
   }
 }

@@ -6,6 +6,14 @@ import 'package:sensors_plus/sensors_plus.dart';
 
 import '../viewmodels/camera_view_model.dart';
 import '../../../measurement/presentation/widgets/custom_painters.dart';
+import '../../domain/usecases/get_available_cameras_usecase.dart';
+import '../../domain/usecases/initialize_camera_usecase.dart';
+import '../../domain/usecases/take_picture_usecase.dart';
+import '../../domain/usecases/toggle_flash_usecase.dart';
+import '../../domain/usecases/switch_camera_usecase.dart';
+import '../../domain/usecases/pick_images_from_gallery_usecase.dart';
+import '../../domain/usecases/analyze_image_usecase.dart';
+import '../../domain/usecases/perform_volume_calculation_usecase.dart';
 
 /// 智慧相機頁面 - 現在是一個輕量級的視圖
 class SmartCameraScreen extends StatelessWidget {
@@ -15,7 +23,15 @@ class SmartCameraScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // 使用 ChangeNotifierProvider 來建立和提供 CameraViewModel
     return ChangeNotifierProvider(
-      create: (_) => CameraViewModel(),
+      create: (context) => CameraViewModel(
+        getAvailableCamerasUseCase: context.read<GetAvailableCamerasUseCase>(),
+        initializeCameraUseCase: context.read<InitializeCameraUseCase>(),
+        takePictureUseCase: context.read<TakePictureUseCase>(),
+        toggleFlashUseCase: context.read<ToggleFlashUseCase>(),
+        pickImagesFromGalleryUseCase: context.read<PickImagesFromGalleryUseCase>(),
+        analyzeImageUseCase: context.read<AnalyzeImageUseCase>(),
+        performVolumeCalculationUseCase: context.read<PerformVolumeCalculationUseCase>(),
+      ),
       child: const _SmartCameraView(),
     );
   }
@@ -86,7 +102,7 @@ class _SmartCameraViewState extends State<_SmartCameraView> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => context.read<CameraViewModel>().goBack(context), // 使用 ViewModel 的方法
+          onPressed: () => Navigator.pop(context), // 使用標準的返回方法
         ),
         title: const Text('智慧拍照測量', style: TextStyle(color: Colors.white)),
         actions: [

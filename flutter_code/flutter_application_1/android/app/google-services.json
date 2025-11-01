@@ -12,7 +12,20 @@
           "package_name": "com.foodtracker.nutritionapp"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "459965557703-4ors8vh63b5tfvk4l5k1dobtda9h0jjr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.foodtracker.nutritionapp",
+            "certificate_hash": "65ecf4121dfeb7fde5e62c2b1db2c863378fcda3"
+          }
+        },
+        {
+          "client_id": "459965557703-nova2vjau7ge2tjc244227aasikic713.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC3bDYoQqlXzfEmnCwJbrhexAr24O05BZI"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "459965557703-nova2vjau7ge2tjc244227aasikic713.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

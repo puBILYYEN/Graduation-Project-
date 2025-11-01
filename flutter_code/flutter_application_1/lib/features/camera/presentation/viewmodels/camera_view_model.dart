@@ -5,45 +5,29 @@ import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
-// 假設的 RAG 數據模型和日誌服務
-// 在實際應用中，這些應該是真實的導入
-Future<void> log(String message) async => print(message);
-class ContainerAnalysisData {
-  final String imagePath;
-  final String timestamp;
-  final ContainerInfo container;
-  final MeasurementResults measurements;
-  final AnalysisMetadata metadata;
-  ContainerAnalysisData({required this.imagePath, required this.timestamp, required this.container, required this.measurements, required this.metadata});
-  Map<String, dynamic> toJson() => {};
-}
-class ContainerInfo {
-  final String shape;
-  final String material;
-  final String color;
-  final List<String> features;
-  ContainerInfo({required this.shape, required this.material, required this.color, required this.features});
-}
-class MeasurementResults {
-  final double volume;
-  final double confidence;
-  final String method;
-  final Map<String, double> dimensions;
-  MeasurementResults({required this.volume, required this.confidence, required this.method, required this.dimensions});
-}
-class AnalysisMetadata {
-  final String deviceInfo;
-  final String algorithm;
-  final double processingTime;
-  final String notes;
-  AnalysisMetadata({required this.deviceInfo, required this.algorithm, required this.processingTime, required this.notes});
-}
+import '../../../../core/services/api/api_services.dart';
+import '../../../analysis/data/models/container_analysis.dart';
+import '../../../measurement/data/models/measurement.dart';
+import '../../../../data/models/reference_object.dart';
+import '../../../../core/services/logging/logger.dart';
+
+import '../../domain/usecases/get_available_cameras_usecase.dart';
+import '../../domain/usecases/initialize_camera_usecase.dart';
+import '../../domain/usecases/take_picture_usecase.dart';
+import '../../domain/usecases/toggle_flash_usecase.dart';
+import '../../domain/usecases/switch_camera_usecase.dart';
+import '../../domain/usecases/pick_images_from_gallery_usecase.dart';
+import '../../domain/usecases/analyze_image_usecase.dart';
+import '../../domain/usecases/perform_volume_calculation_usecase.dart';
 
 
 /// CameraViewModel: 負責處理所有與相機、拍照、計算相關的業務邏輯
@@ -68,9 +52,6 @@ class CameraViewModel extends ChangeNotifier {
 
   int _currentCameraIndex = 0;
 
-  // 圖片選擇相關
-  final ImagePicker _picker = ImagePicker();
-
   // 容積計算相關
   bool _isVolumeMode = false;
   bool get isVolumeMode => _isVolumeMode;
@@ -79,130 +60,120 @@ class CameraViewModel extends ChangeNotifier {
   List<Offset> get detectedEdges => _detectedEdges;
 
   double _calculatedVolume = 0.0;
+  double get calculatedVolume => _calculatedVolume;
+
   String _containerShape = '長方體';
+  String get containerShape => _containerShape;
+
   bool _showVolumeResult = false;
   bool get showVolumeResult => _showVolumeResult;
+
+  // 設備方向
+  bool _isDeviceLandscape = false;
+  bool get isDeviceLandscape => _isDeviceLandscape;
+
+  // Use Cases
+  final GetAvailableCamerasUseCase _getAvailableCamerasUseCase;
+  final InitializeCameraUseCase _initializeCameraUseCase;
+  final TakePictureUseCase _takePictureUseCase;
+  final ToggleFlashUseCase _toggleFlashUseCase;
+  final PickImagesFromGalleryUseCase _pickImagesFromGalleryUseCase;
+  final AnalyzeImageUseCase _analyzeImageUseCase;
+  final PerformVolumeCalculationUseCase _performVolumeCalculationUseCase;
 
   // ====================================================================
   // 初始化和資源釋放
   // ====================================================================
 
-  CameraViewModel() {
+  CameraViewModel({
+    required GetAvailableCamerasUseCase getAvailableCamerasUseCase,
+    required InitializeCameraUseCase initializeCameraUseCase,
+    required TakePictureUseCase takePictureUseCase,
+    required ToggleFlashUseCase toggleFlashUseCase,
+    required PickImagesFromGalleryUseCase pickImagesFromGalleryUseCase,
+    required AnalyzeImageUseCase analyzeImageUseCase,
+    required PerformVolumeCalculationUseCase performVolumeCalculationUseCase,
+  })  : _getAvailableCamerasUseCase = getAvailableCamerasUseCase,
+        _initializeCameraUseCase = initializeCameraUseCase,
+        _takePictureUseCase = takePictureUseCase,
+        _toggleFlashUseCase = toggleFlashUseCase,
+        _pickImagesFromGalleryUseCase = pickImagesFromGalleryUseCase,
+        _analyzeImageUseCase = analyzeImageUseCase,
+        _performVolumeCalculationUseCase = performVolumeCalculationUseCase {
     _initializeCamera();
+    _startOrientationDetection();
   }
 
   @override
-  void dispose() async {
-    try {
-      if (_controller != null) {
-        await _controller!.dispose();
-        _controller = null;
-      }
-    } catch (e) {
-      await log('釋放相機控制器時發生錯誤: $e');
-    }
+  void dispose() {
+    _controller?.dispose();
+    _accelerometerSubscription?.cancel();
     super.dispose();
   }
 
   // ====================================================================
-  // 核心方法 (從 smart_camera_page.dart 遷移過來)
+  // 核心方法
   // ====================================================================
 
-  /// 步驟 1: 初始化相機
+  /// 初始化相機
   Future<void> _initializeCamera() async {
+    _setLoading(true);
     try {
-      final status = await Permission.camera.request();
-      if (!status.isGranted) {
-        // TODO: 處理權限被拒絕的情況 (例如顯示一個對話框)
-        await log("相機權限被拒絕");
-        return;
-      }
-
-      _cameras = await availableCameras();
+      _cameras = await _getAvailableCamerasUseCase();
       if (_cameras.isNotEmpty) {
         await _initializeCameraController(_currentCameraIndex);
       }
     } catch (e) {
-      await log('相機初始化失敗: $e');
+      log('相機初始化失敗: $e');
     }
+    _setLoading(false);
   }
 
   /// 初始化相機控制器
   Future<void> _initializeCameraController(int cameraIndex) async {
     if (_cameras.isEmpty || cameraIndex >= _cameras.length) {
-      await log('無效的相機索引: $cameraIndex (總數: ${_cameras.length})');
       return;
     }
 
+    _setLoading(true);
+    _isInitialized = false;
+    notifyListeners();
+
+    await _controller?.dispose();
+
     try {
-      // 釋放舊的控制器，並等待完全釋放
-      if (_controller != null) {
-        await log('正在釋放舊的相機控制器...');
-        await _controller!.dispose();
-        _controller = null;
-        await log('舊的相機控制器已釋放');
-      }
-
-      // 創建新的控制器
-      _controller = CameraController(
-        _cameras[cameraIndex],
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-
-      await log('正在初始化相機控制器 $cameraIndex...');
-      await _controller!.initialize();
-
-      // 初始化成功後更新狀態
+      _controller = await _initializeCameraUseCase(_cameras[cameraIndex]);
       _isInitialized = true;
       _currentCameraIndex = cameraIndex;
-      await log('相機 $cameraIndex 初始化成功: ${_cameras[cameraIndex].name}');
-
-      // 如果之前有設定閃光燈，重新設定
       if (_isFlashOn) {
-        try {
-          await _controller!.setFlashMode(FlashMode.torch);
-          await log('已恢復閃光燈設定');
-        } catch (e) {
-          await log('設定閃光燈失敗: $e');
-          _isFlashOn = false;
-        }
+        await _toggleFlashUseCase(_controller!, FlashMode.torch);
       }
     } catch (e) {
+      log('相機控制器初始化失敗: $e');
       _isInitialized = false;
-      _controller = null;
-      await log('相機控制器初始化失敗: $e');
-      rethrow; // 重新拋出異常，讓調用者處理
     } finally {
+      _setLoading(false);
       notifyListeners();
     }
+  }
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
   }
 
   /// 切換前後相機
   Future<void> switchCamera() async {
     if (_cameras.length <= 1 || _isLoading) return;
-
-    _setLoading(true);
-    _isInitialized = false;
-    notifyListeners(); // 關鍵一步：先通知 UI 移除 CameraPreview
-
-    // 等待一小段時間確保 UI 完成重建
-    await Future.delayed(const Duration(milliseconds: 100));
-
     final nextCameraIndex = (_currentCameraIndex + 1) % _cameras.length;
     await _initializeCameraController(nextCameraIndex);
-    
-    // _initializeCameraController 內部會再次 notifyListeners()，所以這裡不用再通知
-    _setLoading(false);
   }
 
   /// 切換閃光燈
   Future<void> toggleFlash() async {
     if (_controller == null) return;
     _isFlashOn = !_isFlashOn;
-    await _controller!.setFlashMode(
-      _isFlashOn ? FlashMode.torch : FlashMode.off,
-    );
+    await _toggleFlashUseCase(_controller!, _isFlashOn ? FlashMode.torch : FlashMode.off);
     notifyListeners();
   }
 
@@ -222,71 +193,28 @@ class CameraViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  /// 步驟 2: 主要拍照功能入口 (容積計算模式)
-  Future<void> takeVolumePhoto(BuildContext context) async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-
-    _setLoading(true);
-
-    try {
-      await log('開始容積計算拍照...');
-      final directory = await getApplicationDocumentsDirectory();
-      final imagePath = path.join(
-        directory.path,
-        'volume_${DateTime.now().millisecondsSinceEpoch}.jpg',
-      );
-
-      final XFile image = await _controller!.takePicture();
-      await image.saveTo(imagePath);
-
-      try {
-        final result = await ImageGallerySaver.saveFile(imagePath);
-        await log('容積計算照片保存結果: $result');
-      } catch (e) {
-        await log('保存照片到相簿失敗: $e');
-      }
-
-      await _performAutoVolumeCalculation(context, imagePath);
-
-    } catch (e) {
-      await log('容積計算拍照錯誤: $e');
-      // TODO: 顯示錯誤訊息給用戶
-    } finally {
-      _setLoading(false);
-    }
-  }
-  
   /// 一般拍照，分析後進入營養標籤頁
   Future<void> takePictureAndNavigate(BuildContext context) async {
     if (_controller == null || !_controller!.value.isInitialized) return;
     _setLoading(true);
     try {
-      // 1. 拍照
-      final image = await _controller!.takePicture();
-      await log('拍照成功，圖片路徑: ${image.path}');
+      final image = await _takePictureUseCase(_controller!); 
+      log('拍照成功，圖片路徑: ${image.path}');
 
       if (!context.mounted) return;
 
-      // 2. 呼叫 API 進行分析
-      final apiService = Provider.of<ApiService>(context, listen: false);
-      await log('正在上傳圖片至後端進行分析...');
-      final analysisResult = await apiService.analyzeImage(image.path);
-      await log('後端分析完成');
+      log('正在上傳圖片至後端進行分析...');
+      final analysisResult = await _analyzeImageUseCase(image.path);
+      log('後端分析完成');
 
       if (context.mounted) {
-        // 3. 導航到結果頁，並同時傳遞圖片路徑和分析結果
         context.push('/camera/nutrition-label', extra: {
           'imagePath': image.path,
           'analysis': analysisResult,
         });
       }
     } catch (e) {
-      await log('拍照或分析過程中發生錯誤: $e');
+      log('拍照或分析過程中發生錯誤: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -300,127 +228,9 @@ class CameraViewModel extends ChangeNotifier {
     }
   }
 
+  /// 從相簿選擇圖片
+  final ImagePicker _picker = ImagePicker(); // Added _picker
 
-  /// 步驟 3: 自動容積計算核心功能
-  Future<void> _performAutoVolumeCalculation(BuildContext context, String imagePath) async {
-    try {
-      await log('開始自動容積計算流程...');
-      _detectedEdges = _performEdgeDetection();
-      final detectedShape = _detectContainerShape(_detectedEdges);
-      _containerShape = detectedShape;
-      final estimatedDimensions = _estimateDimensionsFromEdges();
-      final volume = _calculateVolumeFromDimensions(estimatedDimensions);
-      _calculatedVolume = volume;
-      _showVolumeResult = false; // 根據舊程式碼，不直接顯示結果區域
-      notifyListeners();
-
-      await log('容積計算完成: ${volume.toStringAsFixed(2)} cm³');
-      await _generateRagData(imagePath, volume);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('容積計算完成！\n${volume.toStringAsFixed(2)} cm³ (${(volume / 1000).toStringAsFixed(3)} L)'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 5),
-            action: SnackBarAction(
-              label: '查看詳細',
-              textColor: Colors.white,
-              onPressed: () {
-                // TODO: 實現顯示詳細結果的功能
-              },
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      await log('自動容積計算錯誤: $e');
-    }
-  }
-
-  /// 步驟 4: 尺寸估算函數 (模擬)
-  Map<String, double> _estimateDimensionsFromEdges() {
-    if (_detectedEdges.isEmpty) {
-      return {'length': 10.0, 'width': 8.0, 'height': 12.0};
-    }
-    double minX = _detectedEdges.map((e) => e.dx).reduce(math.min);
-    double maxX = _detectedEdges.map((e) => e.dx).reduce(math.max);
-    double minY = _detectedEdges.map((e) => e.dy).reduce(math.min);
-    double maxY = _detectedEdges.map((e) => e.dy).reduce(math.max);
-
-    double pixelToCm = 0.05;
-    double width = (maxX - minX) * pixelToCm;
-    double height = (maxY - minY) * pixelToCm;
-    double depth = width * 0.8;
-
-    return {'length': width, 'width': depth, 'height': height};
-  }
-
-  /// 步驟 5: 容積計算函數
-  double _calculateVolumeFromDimensions(Map<String, double> dimensions) {
-    switch (_containerShape) {
-      case '長方體':
-        return dimensions['length']! * dimensions['width']! * dimensions['height']!;
-      case '圓柱體':
-        double radius = dimensions['length']! / 2;
-        return math.pi * radius * radius * dimensions['height']!;
-      case '立方體':
-        double side = (dimensions['length']! + dimensions['width']!) / 2;
-        return side * side * side;
-      default:
-        return dimensions['length']! * dimensions['width']! * dimensions['height']!;
-    }
-  }
-
-  /// 步驟 6: RAG數據生成函數
-  Future<void> _generateRagData(String imagePath, double volume) async {
-    try {
-      final ragData = ContainerAnalysisData(
-        imagePath: imagePath,
-        timestamp: DateTime.now().toIso8601String(),
-        container: ContainerInfo(
-          shape: _containerShape,
-          material: '推測材質',
-          color: '推測顏色',
-          features: ['自動檢測特徵'],
-        ),
-        measurements: MeasurementResults(
-          volume: volume,
-          confidence: 0.85,
-          method: '智能視覺測量',
-          dimensions: {'長度': 10.0, '寬度': 8.0, '高度': 12.0},
-        ),
-        metadata: AnalysisMetadata(
-          deviceInfo: '智能手機',
-          algorithm: 'EdgeDetection+ShapeRecognition',
-          processingTime: 1.5,
-          notes: '自動容積計算完成',
-        ),
-      );
-      final jsonData = ragData.toJson();
-      await log('RAG 數據已生成: ${jsonData.toString()}');
-    } catch (e) {
-      await log('RAG 數據生成失敗: $e');
-    }
-  }
-
-  // 模擬邊緣檢測和形狀識別
-  List<Offset> _performEdgeDetection() {
-    // 這是一個模擬實現
-    return [
-      const Offset(100, 100),
-      const Offset(300, 100),
-      const Offset(300, 400),
-      const Offset(100, 400),
-    ];
-  }
-
-  String _detectContainerShape(List<Offset> edges) {
-    // 這是一個模擬實現
-    return '長方體';
-  }
-
-  /// 從相簿選擇圖片（支援多選）
   Future<void> pickFromGallery(BuildContext context) async {
     try {
       final images = await _picker.pickMultiImage(
@@ -431,45 +241,145 @@ class CameraViewModel extends ChangeNotifier {
       if (images.isEmpty) return;
 
       if (images.length == 1) {
-        // 單張圖片直接處理
-        await _processImage(context, images.first.path);
+        _processImage(context, images.first.path);
       } else {
-        // 多張圖片導航到處理頁面
-        await _processMultipleImages(context, images);
+        _processMultipleImages(context, images);
       }
     } catch (e) {
-      await log('選擇圖片失敗: $e');
+      log('選擇圖片失敗: $e');
+    }
+  }
+
+  void _processImage(BuildContext context, String imagePath) {
+    context.push('/camera/nutrition-label', extra: imagePath);
+  }
+
+  void _processMultipleImages(BuildContext context, List<XFile> images) {
+    context.push('/camera/process-multiple', extra: {
+      'images': images,
+    });
+  }
+
+  // ====================================================================
+  // 容積計算相關方法
+  // ====================================================================
+
+  Future<void> takeVolumePhoto(BuildContext context) async {
+    if (_controller == null || !_controller!.value.isInitialized) return;
+
+    _setLoading(true);
+
+    try {
+      final image = await _controller!.takePicture();
+      await _performAutoVolumeCalculation(context, image.path);
+    } catch (e) {
+      log('容積計算拍照錯誤: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> _performAutoVolumeCalculation(BuildContext context, String imagePath) async {
+    try {
+      _detectedEdges = _performEdgeDetection();
+      _containerShape = _detectContainerShape(_detectedEdges);
+      final estimatedDimensions = _estimateDimensionsFromEdges();
+      _calculatedVolume = _calculateVolumeFromDimensions(estimatedDimensions);
+      _showVolumeResult = true;
+      notifyListeners();
+
+      await _generateRagData(imagePath, _calculatedVolume);
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('選擇圖片失敗: $e'),
-            backgroundColor: Colors.red,
+            content: Text('容積計算完成！'),
+            backgroundColor: Colors.green,
           ),
         );
       }
+    } catch (e) {
+      log('自動容積計算錯誤: $e');
     }
   }
 
-  /// 處理單張圖片
-  Future<void> _processImage(BuildContext context, String imagePath) async {
-    if (context.mounted) {
-      context.push('/camera/nutrition-label', extra: imagePath);
+  List<Offset> _performEdgeDetection() {
+    // Mock implementation
+    return [
+      const Offset(100, 100),
+      const Offset(300, 100),
+      const Offset(300, 400),
+      const Offset(100, 400),
+    ];
+  }
+
+  String _detectContainerShape(List<Offset> edges) {
+    // Mock implementation
+    return '長方體';
+  }
+
+  Map<String, double> _estimateDimensionsFromEdges() {
+    // Mock implementation
+    return {'length': 10.0, 'width': 8.0, 'height': 12.0};
+  }
+
+  double _calculateVolumeFromDimensions(Map<String, double> dimensions) {
+    // Mock implementation
+    return dimensions['length']! * dimensions['width']! * dimensions['height']!;
+  }
+
+  Future<void> _generateRagData(String imagePath, double volume) async {
+    try {
+      final ragData = ContainerAnalysis(
+        id: DateTime.now().millisecondsSinceEpoch.toString(), // Assuming an ID is needed
+        imagePath: imagePath,
+        containerType: _containerShape, // Using containerShape as containerType
+        confidence: 0.85, // Placeholder confidence
+        dimensions: ContainerDimensions( // Placeholder dimensions
+          width: 10.0,
+          height: 8.0,
+          depth: 12.0,
+          volume: volume,
+          unit: 'cm',
+        ),
+        analyzedAt: DateTime.now(),
+        detectedObjects: [], // Placeholder for detected objects
+      );
+      
+      await _saveToFirestore(ragData);
+    } catch (e) {
+      log('RAG 數據生成失敗: $e');
     }
   }
 
-  /// 處理多張圖片
-  Future<void> _processMultipleImages(BuildContext context, List<XFile> images) async {
-    if (context.mounted) {
-      context.push('/camera/process-multiple', extra: {
-        'images': images,
-        'onRetakePhoto': () => context.pop(),
-        'onSelectFromGallery': () => pickFromGallery(context),
-      });
+  Future<void> _saveToFirestore(ContainerAnalysis ragData) async {
+    try {
+      FirebaseFirestore firestore = FirebaseFirestore.instance;
+      String docId = DateTime.now().millisecondsSinceEpoch.toString();
+      await firestore
+          .collection('container_measurements')
+          .doc(docId)
+          .set(ragData.toMap()); // Use toMap() for ContainerAnalysis
+    } catch (e) {
+      log('Firebase 保存失敗: $e');
     }
   }
 
-  /// 返回上一頁
-  void goBack(BuildContext context) {
-    context.pop();
+
+  // ====================================================================
+  // 方向檢測
+  // ====================================================================
+  StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
+
+  void _startOrientationDetection() {
+    _accelerometerSubscription = accelerometerEvents.listen(
+      (AccelerometerEvent event) {
+        final isLandscape = event.x.abs() > event.y.abs();
+        if (isLandscape != _isDeviceLandscape) {
+          _isDeviceLandscape = isLandscape;
+          notifyListeners();
+        }
+      },
+    );
   }
 }

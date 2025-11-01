@@ -13,9 +13,12 @@ import '../../features/nutrition/presentation/pages/nutrition_label_screen.dart'
 import '../../features/measurement/presentation/pages/reference_measurement_page.dart';
 import '../../features/camera/presentation/pages/multiple_images_processing_page.dart';
 import '../../features/food_diary/presentation/pages/food_diary_page.dart';
+import '../../test_google_login.dart';
 
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../../features/auth/domain/repositories/auth_repository.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // Replaced by AuthRepository
 
 class AppRouter {
   // 建立 GoRouter 的靜態實例
@@ -24,30 +27,22 @@ class AppRouter {
     initialLocation: '/',
 
     // 路由重新導向邏輯 (導航守衛)
-    redirect: (context, state) {
-      // 取得目前 Firebase 使用者
-      final user = FirebaseAuth.instance.currentUser;
-
-      // 檢查使用者是否已登入
-      final bool loggedIn = user != null;
-
-      // 檢查目標路徑是否為登入或註冊頁面
-      final bool loggingIn = state.matchedLocation == '/' || state.matchedLocation == '/register';
-
-      // 導航邏輯：
-      // 1. 如果使用者未登入，且目標不是登入/註冊頁，則導向到登入頁
-      if (!loggedIn && !loggingIn) {
-        return '/';
-      }
-
-      // 2. 如果使用者已登入，且目標是登入/註冊頁，則導向到主頁
-      if (loggedIn && loggingIn) {
-        return '/home';
-      }
-
-      // 3. 其他情況，不做任何操作
-      return null;
-    },
+    // redirect: (context, state) {
+    //   final AuthRepository authRepository = context.read<AuthRepository>();
+    //   final bool loggedIn = authRepository.currentUser != null;
+    //
+    //   final bool loggingIn = state.matchedLocation == '/' || state.matchedLocation == '/register';
+    //
+    //   if (!loggedIn && !loggingIn) {
+    //     return '/';
+    //   }
+    //
+    //   if (loggedIn && loggingIn) {
+    //     return '/home';
+    //   }
+    //
+    //   return null;
+    // },
 
     // 路由列表
     routes: [
@@ -70,10 +65,16 @@ class AppRouter {
         builder: (context, state) => const MainFrame(),
       ),
 
+      // Google 登入測試頁面
+      GoRoute(
+        path: '/test-google-login',
+        builder: (context, state) => const TestGoogleLoginPage(),
+      ),
+
       // 飲食日記頁面
       GoRoute(
         path: '/diary',
-        builder: (context, state) => const FoodDiaryPage(),
+        builder: (context, state) => const FoodDiaryPageContent(),
       ),
 
       // 智慧相機頁面
