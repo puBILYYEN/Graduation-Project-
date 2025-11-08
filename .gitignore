@@ -27,9 +27,11 @@ migrate_working_dir/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
+pubspec.lock
 
 # Symbolication related
 app.*.symbols
@@ -41,3 +43,60 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# ===== 以下是新增的重要規則 =====
+
+# 備份檔案 (避免上傳備份檔案!)
+*_backup.*
+*_old.*
+*_bak.*
+*.backup
+*_v2.*
+*_v3.*
+*_final.*
+*_test.*
+*_temp.*
+
+# 範例專案 (避免上傳 Flutter 範例)
+examples/
+
+# 其他專案版本 (避免上傳重複的專案)
+flutter_application_2/
+flutter_code/
+
+# 專案文件記錄
+combined_modules.txt
+*PROGRESS*.md
+*STATUS*.md
+*CLEANUP*.md
+*MODULARIZATION*.md
+
+# Firebase 私密檔案 (安全考量)
+google-services.json
+.env
+.env.local
+
+# Python 後端相關
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+app.py
+*.py[cod]
+
+# 系統檔案
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# 臨時檔案
+*.tmp
+*.temp
+*~
+
+# 忽略資料夾
+ignore/
+temp/
+tmp/
+backup/

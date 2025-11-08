@@ -4,6 +4,7 @@ import 'package:flutter/services.dart'; // Added
 import 'package:provider/provider.dart';
 
 import '../viewmodels/food_diary_viewmodel.dart';
+import '../../../../core/services/app_logger.dart';
 import '../../domain/usecases/get_food_entries_usecase.dart';
 import '../../domain/usecases/add_food_entry_usecase.dart';
 import '../../domain/entities/food_entry.dart';
@@ -21,6 +22,7 @@ class FoodDiaryPage extends StatelessWidget {
           context.read<GetFoodEntriesUseCase>(),
           context.read<AddFoodEntryUseCase>(),
         );
+        AppLogger.logEvent('飲食記錄頁面初始化');
         viewModel.fetchFoodEntries(); // Call fetchFoodEntries on the viewModel instance
         return viewModel;
       },
@@ -61,6 +63,44 @@ class _FoodDiaryPageContentState extends State<FoodDiaryPageContent> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          // 測試資料按鈕
+          Consumer<FoodDiaryViewModel>(
+            builder: (context, viewModel, child) {
+              return IconButton(
+                icon: const Icon(Icons.add_circle, color: Colors.blue),
+                tooltip: '添加測試資料',
+                onPressed: () async {
+                  await AppLogger.logButtonClick('添加測試資料按鈕');
+                  try {
+                    await viewModel.addTestData();
+                    await AppLogger.logEvent('[OK] 測試資料添加成功');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('✓ 測試資料添加成功！'),
+                          backgroundColor: Colors.green,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    await AppLogger.logEvent('[ERROR] 測試資料添加失敗: $e');
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('✗ 添加失敗: $e'),
+                          backgroundColor: Colors.red,
+                          duration: const Duration(seconds: 3),
+                        ),
+                      );
+                    }
+                  }
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: Consumer<FoodDiaryViewModel>(
         builder: (context, viewModel, child) {

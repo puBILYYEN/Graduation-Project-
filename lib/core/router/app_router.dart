@@ -9,13 +9,14 @@ import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/profile_setup_page.dart';
 import '../../features/home/presentation/pages/main_frame.dart';
-import '../../features/camera/presentation/pages/smart_camera_page.dart';
+// import '../../features/camera/presentation/pages/smart_camera_page.dart';  // 已註解：改用完整版相機頁面
+import '../../pages/camera/camera_screen_full.dart';  // 完整功能的相機頁面
+import '../../features/camera/presentation/pages/test_camera_page.dart';  // 測試頁面
 import '../../features/nutrition/presentation/pages/nutrition_label_screen.dart';
 import '../../features/measurement/presentation/pages/reference_measurement_page.dart';
 import '../../features/camera/presentation/pages/multiple_images_processing_page.dart';
 import '../../features/food_diary/presentation/pages/food_diary_page.dart';
-import '../../test_google_login.dart';
-
+import '../../features/statistics/presentation/pages/statistics_page.dart';
 
 import 'package:provider/provider.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -72,22 +73,22 @@ class AppRouter {
         builder: (context, state) => const MainFrame(),
       ),
 
-      // Google 登入測試頁面
-      GoRoute(
-        path: '/test-google-login',
-        builder: (context, state) => const TestGoogleLoginPage(),
-      ),
-
       // 飲食日記頁面
       GoRoute(
         path: '/diary',
         builder: (context, state) => const FoodDiaryPageContent(),
       ),
 
+      // 統計頁面
+      GoRoute(
+        path: '/statistics',
+        builder: (context, state) => const StatisticsPage(),
+      ),
+
       // 智慧相機頁面
       GoRoute(
         path: '/camera',
-        builder: (context, state) => const SmartCameraScreen(),
+        builder: (context, state) => const CameraScreen(),  // 使用完整版相機頁面
         routes: [
           // 營養標籤頁面
           GoRoute(

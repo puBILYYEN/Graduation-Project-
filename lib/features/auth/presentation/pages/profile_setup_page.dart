@@ -69,14 +69,26 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
   /// 計算建議卡路里
   double _calculateSuggestedCalories(double tdee, int goal) {
+    double suggestedCalories;
+
     switch (goal) {
       case 1: // 減重
-        return tdee - 500; // 每天減少 500 卡
+        suggestedCalories = tdee - 500; // 每天減少 500 卡
+        break;
       case 2: // 增重
-        return tdee + 500; // 每天增加 500 卡
+        suggestedCalories = tdee + 500; // 每天增加 500 卡
+        break;
       default: // 維持
-        return tdee;
+        suggestedCalories = tdee;
     }
+
+    // 確保每日最低熱量攝取不低於 1200 大卡（健康安全標準）
+    if (suggestedCalories < 1200) {
+      print('⚠️ 計算出的熱量 ${suggestedCalories.toStringAsFixed(0)} 低於 1200 大卡，已調整為 1200');
+      return 1200;
+    }
+
+    return suggestedCalories;
   }
 
   /// 顯示照片來源選擇對話框
@@ -313,14 +325,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       final targetCarbs = (suggestedCalories * 0.45) / 4;  // 45% 來自碳水，每克4卡
       final targetFat = (suggestedCalories * 0.25) / 9;    // 25% 來自脂肪，每克9卡
 
-      // 更新 Firestore 資料
-      await _firestore.collection('member').doc(user.uid).update({
+      // 更新 Firestore 資料 (使用 set 搭配 merge，如果文檔不存在會自動創建)
+      await _firestore.collection('member').doc(user.uid).set({
         // 個人基本資料
         'age': age,
         'gender': _selectedGender,
         'height': height,
         'weight': weight,
         'goal': _selectedGoal,
+        'activityLevel': _selectedActivityLevel, // 儲存活動量等級
 
         // 計算數值
         'BMR': bmr.round(),
@@ -335,7 +348,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
         // 更新時間
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       if (mounted) {
         _showSnackBar('個人資料設定完成！', isError: false);
@@ -630,6 +643,64 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                           return null;
                         },
                       ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // 活動量選擇
+                const Text('日常活動量', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                const SizedBox(height: 8),
+                Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: const Text('久坐'),
+                      subtitle: const Text('辦公室工作，幾乎沒有運動'),
+                      value: 'sedentary',
+                      groupValue: _selectedActivityLevel,
+                      onChanged: (value) => setState(() => _selectedActivityLevel = value!),
+                      tileColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      title: const Text('輕度活動'),
+                      subtitle: const Text('每週運動 1-3 天'),
+                      value: 'lightly_active',
+                      groupValue: _selectedActivityLevel,
+                      onChanged: (value) => setState(() => _selectedActivityLevel = value!),
+                      tileColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      title: const Text('中度活動'),
+                      subtitle: const Text('每週運動 3-5 天'),
+                      value: 'moderately_active',
+                      groupValue: _selectedActivityLevel,
+                      onChanged: (value) => setState(() => _selectedActivityLevel = value!),
+                      tileColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      title: const Text('高度活動'),
+                      subtitle: const Text('每週運動 6-7 天'),
+                      value: 'very_active',
+                      groupValue: _selectedActivityLevel,
+                      onChanged: (value) => setState(() => _selectedActivityLevel = value!),
+                      tileColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    const SizedBox(height: 8),
+                    RadioListTile<String>(
+                      title: const Text('極高活動'),
+                      subtitle: const Text('每天運動 + 體力勞動工作'),
+                      value: 'extra_active',
+                      groupValue: _selectedActivityLevel,
+                      onChanged: (value) => setState(() => _selectedActivityLevel = value!),
+                      tileColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ],
                 ),

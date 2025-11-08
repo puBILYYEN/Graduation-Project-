@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/services/app_logger.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/services.dart'; // Added
 import 'package:provider/provider.dart';
@@ -13,17 +14,12 @@ class BodyAnalysisPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) {
-        final viewModel = BodyAnalysisViewModel(
-          context.read<GetBodyMetricsUseCase>(),
-          context.read<UpdateBodyMetricsUseCase>(),
-        );
-        viewModel.fetchBodyMetrics(); // Call fetchBodyMetrics on the viewModel instance
-        return viewModel;
-      },
-      child: const BodyAnalysisPageContent(),
-    );
+    // 從全局 Provider 獲取 ViewModel 並初始化
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BodyAnalysisViewModel>().fetchBodyMetrics();
+    });
+
+    return const BodyAnalysisPageContent();
   }
 }
 
@@ -54,8 +50,11 @@ class BodyAnalysisPageContent extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: Consumer<BodyAnalysisViewModel>(
-        builder: (context, viewModel, child) {
+      body: Builder(
+        builder: (context) {
+          try {
+            return Consumer<BodyAnalysisViewModel>(
+              builder: (context, viewModel, child) {
           if (viewModel.isLoading || viewModel.bodyMetrics == null) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -74,6 +73,28 @@ class BodyAnalysisPageContent extends StatelessWidget {
               ],
             ),
           );
+              },
+            );
+          } catch (e) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text(
+                    '身體分析功能暫時無法使用',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    '請重新啟動應用程式',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+            );
+          }
         },
       ),
     );

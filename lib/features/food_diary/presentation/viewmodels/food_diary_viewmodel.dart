@@ -113,4 +113,56 @@ class FoodDiaryViewModel extends ChangeNotifier {
     );
     setSelectedDate(newDate);
   }
+
+  /// 添加測試資料到 Firebase
+  Future<void> addTestData() async {
+    try {
+      _setLoading(true);
+
+      // 測試資料1: 烤鮭魚
+      final salmon = FoodEntry(
+        name: 'Grilled Salmon',
+        chineseName: '烤鮭魚',
+        mealType: '午餐',
+        calories: 350,
+        imageUrls: [
+          'https://images.unsplash.com/photo-1467003909585-2f8a72700288?w=400',
+          'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400',
+          'https://images.unsplash.com/photo-1574781330855-d0db2293d3b3?w=400',
+        ],
+        servingInfo: '150g',
+      );
+
+      // 測試資料2: 希臘沙拉
+      final salad = FoodEntry(
+        name: 'Greek Salad',
+        chineseName: '希臘沙拉',
+        mealType: '晚餐',
+        calories: 180,
+        imageUrls: [
+          'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400',
+          'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400',
+          'https://images.unsplash.com/photo-1551248429-40975aa4de74?w=400',
+        ],
+        servingInfo: '200g',
+      );
+
+      // 添加到 Firebase
+      await _addFoodEntryUseCase(salmon);
+      print('✓ 已添加測試資料：烤鮭魚');
+
+      await _addFoodEntryUseCase(salad);
+      print('✓ 已添加測試資料：希臘沙拉');
+
+      // 重新載入資料
+      await fetchFoodEntries();
+
+      _setLoading(false);
+      print('✓ 測試資料添加完成！');
+    } catch (e) {
+      _setLoading(false);
+      print('✗ 添加測試資料失敗: $e');
+      rethrow;
+    }
+  }
 }

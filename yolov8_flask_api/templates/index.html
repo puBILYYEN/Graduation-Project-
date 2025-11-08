@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>食物辨識與飲食建議</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 30px; }
+        h1 { color: #333; }
+        img { max-width: 400px; margin-top: 20px; border: 1px solid #ccc; }
+        pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+        .section { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+    <h1>食物辨識與飲食建議系統</h1>
+
+    <div class="section">
+        <input type="file" id="imageInput">
+        <button onclick="uploadImage()">上傳辨識</button>
+    </div>
+
+    <div class="section">
+        <h2>辨識後圖片</h2>
+        <img id="resultImage" src="" alt="">
+    </div>
+
+    <div class="section">
+        <h2>YOLO JSON</h2>
+        <pre id="jsonOutput"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Gemini 物件解釋</h2>
+        <pre id="geminiExplain"></pre>
+    </div>
+
+    <div class="section">
+        <h2>Gemini 飲食建議</h2>
+        <pre id="dietAdvice"></pre>
+    </div>
+
+    <script>
+        function uploadImage() {
+            const input = document.getElementById('imageInput');
+            if (input.files.length === 0) {
+                alert("請先選擇圖片！");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', input.files[0]);
+
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 顯示圖片
+                document.getElementById('resultImage').src = data.image_path;
+
+                // 顯示 YOLO JSON
+                document.getElementById('jsonOutput').textContent = JSON.stringify(data.predictions, null, 2);
+
+                // 顯示 Gemini 解釋
+                document.getElementById('geminiExplain').textContent = data.gemini_reply;
+
+                // 顯示 Gemini 飲食建議
+                document.getElementById('dietAdvice').textContent = data.diet_advice;
+            })
+            .catch(err => {
+                console.error(err);
+                alert("辨識失敗！");
+            });
+        }
+    </script>
+</body>
+</html>
