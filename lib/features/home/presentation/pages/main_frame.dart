@@ -80,22 +80,22 @@ class _MainFrameState extends State<MainFrame> {
         currentIndex: _getNavigationIndex(), // 目前選中的導航項目索引
 
         // 導航項目點擊處理
-        onTap: (index) async {
-          await AppLogger.logButtonClick('底部導航按鈕 index=$index');
-          await AppLogger.logEvent('[NAV_DEBUG] 當前頁面: $_currentPage');
-          await AppLogger.logEvent('[NAV_DEBUG] 點擊索引: $index');
+        onTap: (index) {
+          //           await AppLogger.logButtonClick('底部導航按鈕 index=$index');
+          //           await AppLogger.logEvent('[NAV_DEBUG] 當前頁面: $_currentPage');
+          //           await AppLogger.logEvent('[NAV_DEBUG] 點擊索引: $index');
 
           if (index == 2) { // 如果點擊的是相機按鈕（索引 2）
-            await AppLogger.logNavigation('MainFrame', '/camera');
-            await AppLogger.logEvent('[NAV_DEBUG] 準備導航到相機頁面');
+          //             await AppLogger.logNavigation('MainFrame', '/camera');
+          //             await AppLogger.logEvent('[NAV_DEBUG] 準備導航到相機頁面');
             // 導航到相機頁面，而不是更新底部導航狀態
             context.push('/camera');
-            await AppLogger.logEvent('[NAV_DEBUG] 導航已執行');
+          //             await AppLogger.logEvent('[NAV_DEBUG] 導航已執行');
           } else {
             // 更新當前頁面狀態，觸發頁面重建
             setState(() {
               AppPage newPage = _getPageFromNavigationIndex(index);
-              AppLogger.logNavigation(_currentPage.toString(), newPage.toString());
+              //               AppLogger.logNavigation(_currentPage.toString(), newPage.toString());
               _currentPage = newPage;
             });
           }

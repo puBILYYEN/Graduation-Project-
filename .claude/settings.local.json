@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(python app_enhanced.py:*)",
+      "Bash(timeout /t 5)",
+      "Bash(ping:*)",
+      "Bash(where:*)",
+      "Bash(devtunnel create:*)",
+      "Bash(devtunnel port create:*)",
+      "Bash(devtunnel host:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

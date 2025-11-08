@@ -356,25 +356,25 @@ class _CameraScreenState extends State<CameraScreen>
   // ====================================================================
   Future<void> _initializeCamera() async {
     print('[CAMERA DEBUG] Step 1: 方法開始');
-    await AppLogger.logEvent('[CAMERA] _initializeCamera 方法開始執行');
+    //     await AppLogger.logEvent('[CAMERA] _initializeCamera 方法開始執行');
 
     print('[CAMERA DEBUG] Step 2: try block 開始');
     try {
       print('[CAMERA DEBUG] Step 3: 準備記錄第二條日誌');
-      await AppLogger.logEvent('[CAMERA] 準備請求相機權限...');
+    //       await AppLogger.logEvent('[CAMERA] 準備請求相機權限...');
 
       print('[CAMERA DEBUG] Step 4: 準備請求權限');
       // 步驟1：只請求相機權限
       final hasPermissions = await _requestCameraPermission();
 
       print('[CAMERA DEBUG] Step 5: 權限請求完成 - $hasPermissions');
-      await AppLogger.logEvent('[CAMERA] 權限請求結果: $hasPermissions');
+    //       await AppLogger.logEvent('[CAMERA] 權限請求結果: $hasPermissions');
 
       if (!hasPermissions) {
-        await AppLogger.logEvent('[CAMERA] ❌ 權限未獲得，終止初始化');
+    //         await AppLogger.logEvent('[CAMERA] ❌ 權限未獲得，終止初始化');
         return; // 相機權限未獲得，終止初始化
       }
-      await AppLogger.logEvent('[CAMERA] ✅ 權限已獲得，繼續初始化設備');
+    //       await AppLogger.logEvent('[CAMERA] ✅ 權限已獲得，繼續初始化設備');
 
       print('[CAMERA DEBUG] Step 6: 準備初始化設備');
       // 步驟2：初始化相機設備
@@ -384,7 +384,7 @@ class _CameraScreenState extends State<CameraScreen>
       print('[CAMERA DEBUG] ERROR: 捕獲異常 - $e');
       print('[CAMERA DEBUG] StackTrace: $stackTrace');
       log('相機初始化錯誤: $e'); // 記錄錯誤到日誌
-      await AppLogger.logEvent('[CAMERA] ❌ _initializeCamera 異常: $e');
+    //       await AppLogger.logEvent('[CAMERA] ❌ _initializeCamera 異常: $e');
       if (mounted) {
         // 根據錯誤類型設定不同的錯誤訊息
         String errorMsg = '相機初始化失敗';
@@ -403,8 +403,13 @@ class _CameraScreenState extends State<CameraScreen>
   // 相機設備初始化函數 (Camera Device Initialization Function)
   Future<void> _initializeCameraDevice() async {
     try {
-      // 步驟1：檢查系統中可用的相機設備
-      cameras = await availableCameras();
+      // 步驟1：檢查系統中可用的相機設備（添加超時保護）
+      cameras = await availableCameras().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException('獲取相機列表超時');
+        },
+      );
       if (cameras == null || cameras!.isEmpty) {
         setState(() {
           _hasError = true;
@@ -419,11 +424,16 @@ class _CameraScreenState extends State<CameraScreen>
         ResolutionPreset.high, // 設定高畫質
         enableAudio: false, // 不啟用音訊錄製
       );
-      await AppLogger.logEvent('[CAMERA] 相機控制器已創建，準備初始化...');
+    //       await AppLogger.logEvent('[CAMERA] 相機控制器已創建，準備初始化...');
 
-      // 步驟3：初始化相機控制器
-      await _controller!.initialize();
-      await AppLogger.logEvent('[CAMERA] 相機控制器初始化完成');
+      // 步驟3：初始化相機控制器（添加超時保護）
+      await _controller!.initialize().timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('相機初始化超時');
+        },
+      );
+    //       await AppLogger.logEvent('[CAMERA] 相機控制器初始化完成');
 
       // 步驟4：更新UI狀態（僅在組件仍然掛載時）
       if (mounted) {
@@ -431,11 +441,11 @@ class _CameraScreenState extends State<CameraScreen>
           _isInitialized = true; // 標記為已初始化
           _hasError = false; // 清除錯誤狀態
         });
-        await AppLogger.logEvent('[CAMERA] ✅ 相機初始化成功，UI 已更新');
+    //         await AppLogger.logEvent('[CAMERA] ✅ 相機初始化成功，UI 已更新');
       }
     } catch (e) {
       log('相機設備初始化錯誤: $e'); // 記錄詳細錯誤信息
-      await AppLogger.logEvent('[CAMERA] ❌ 相機設備初始化錯誤: $e');
+    //       await AppLogger.logEvent('[CAMERA] ❌ 相機設備初始化錯誤: $e');
       if (mounted) {
         setState(() {
           _hasError = true;

@@ -17,6 +17,7 @@ import '../../features/measurement/presentation/pages/reference_measurement_page
 import '../../features/camera/presentation/pages/multiple_images_processing_page.dart';
 import '../../features/food_diary/presentation/pages/food_diary_page.dart';
 import '../../features/statistics/presentation/pages/statistics_page.dart';
+import '../../features/settings/presentation/pages/settings_page.dart';
 
 import 'package:provider/provider.dart';
 import '../../features/auth/domain/repositories/auth_repository.dart';
@@ -83,6 +84,12 @@ class AppRouter {
       GoRoute(
         path: '/statistics',
         builder: (context, state) => const StatisticsPage(),
+      ),
+
+      // 設置頁面
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsPage(),
       ),
 
       // 智慧相機頁面

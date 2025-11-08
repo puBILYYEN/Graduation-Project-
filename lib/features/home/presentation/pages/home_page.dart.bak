@@ -46,9 +46,6 @@ class _HomePageContentState extends State<HomePageContent> {
   // 訊息輸入控制器
   final TextEditingController _messageController = TextEditingController();
 
-  // 訊息輸入狀態
-  bool _hasMessageText = false;
-
   // ====================================================================
   // 首頁建構方法和主要 UI
   // ====================================================================
@@ -57,16 +54,6 @@ class _HomePageContentState extends State<HomePageContent> {
     super.initState();
     AppLogger.logEvent('首頁初始化');
     _initializeSocket();
-
-    // 監聽文字輸入變化
-    _messageController.addListener(() {
-      final hasText = _messageController.text.trim().isNotEmpty;
-      if (hasText != _hasMessageText) {
-        setState(() {
-          _hasMessageText = hasText;
-        });
-      }
-    });
   }
 
   @override
@@ -143,8 +130,8 @@ class _HomePageContentState extends State<HomePageContent> {
         leading: Builder(
           builder: (context) => IconButton(
             icon: Icon(Icons.menu, color: Colors.grey[800]), // 選單圖示
-            onPressed: () {
-              // await AppLogger.logButtonClick('側邊選單按鈕');
+            onPressed: () async {
+              await AppLogger.logButtonClick('側邊選單按鈕');
               Scaffold.of(context).openDrawer(); // 打開側邊選單
             },
           ),
@@ -163,9 +150,12 @@ class _HomePageContentState extends State<HomePageContent> {
         actions: [
           IconButton(
             icon: Icon(Icons.settings_outlined, color: Colors.grey[800]),
-            onPressed: () {
-              // await AppLogger.logButtonClick('設置按鈕');
-              context.push('/settings');
+            onPressed: () async {
+              await AppLogger.logButtonClick('設置按鈕');
+              // TODO: 實現設置頁面導航
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('設置功能開發中')),
+              );
             },
           ),
         ],
@@ -601,14 +591,14 @@ class _HomePageContentState extends State<HomePageContent> {
               // 發送按鈕
               Container(
                 decoration: BoxDecoration(
-                  color: _isConnected && _hasMessageText
+                  color: _isConnected && _messageController.text.trim().isNotEmpty
                       ? Colors.blue[500]
                       : Colors.grey[300],
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
                   icon: const Icon(Icons.send, color: Colors.white),
-                  onPressed: _isConnected && _hasMessageText
+                  onPressed: _isConnected
                       ? () {
                           final message = _messageController.text.trim();
                           if (message.isNotEmpty) {
@@ -989,8 +979,8 @@ class _HomePageContentState extends State<HomePageContent> {
   /// 營養統計入口卡片
   Widget _buildStatisticsCard() {
     return GestureDetector(
-      onTap: () {
-        // await AppLogger.logButtonClick('營養統計入口');
+      onTap: () async {
+        await AppLogger.logButtonClick('營養統計入口');
         context.push('/statistics');
       },
       child: Container(
