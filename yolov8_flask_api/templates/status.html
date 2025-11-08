@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>營養知識 RAG 系統 - 狀態監控</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .status-badge.healthy {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-badge.warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8fafc;
+            border-radius: 12px;
+            transition: transform 0.2s;
+        }
+
+        .service-item:hover {
+            transform: translateX(5px);
+        }
+
+        .service-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #334155;
+        }
+
+        .service-desc {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .service-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.active {
+            background: #10b981;
+        }
+
+        .status-dot.inactive {
+            background: #ef4444;
+        }
+
+        .status-text {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-text.active {
+            color: #10b981;
+        }
+
+        .status-text.inactive {
+            color: #ef4444;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .info-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .info-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .refresh-btn {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .refresh-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍎 營養知識 RAG 系統</h1>
+            <p>智能食物辨識 × 個性化營養建議</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>正在載入系統狀態...</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <div class="status-card">
+                <span id="statusBadge" class="status-badge healthy">● 系統正常運行</span>
+
+                <div class="service-item">
+                    <div>
+                        <div class="service-name">🤖 YOLO 圖片辨識</div>
+                        <div class="service-desc">食物圖片識別與分析</div>
+                    </div>
+                    <div class="service-status">
+                        <span id="yolo-status" class="status-dot active"></span>
+                        <span id="yolo-text" class="status-text active">運行中</span>
+                    </div>
+                </div>
+
+                <div class="service-item">
+                    <div>
+                        <div class="service-name">🧠 RAG 知識問答</div>
+                        <div class="service-desc">營養知識檢索與回答</div>
+                    </div>
+                    <div class="service-status">
+                        <span id="rag-status" class="status-dot active"></span>
+                        <span id="rag-text" class="status-text active">運行中</span>
+                    </div>
+                </div>
+
+                <div class="service-item">
+                    <div>
+                        <div class="service-name">📊 向量資料庫</div>
+                        <div class="service-desc">Chroma 向量存儲</div>
+                    </div>
+                    <div class="service-status">
+                        <span id="vector-status" class="status-dot active"></span>
+                        <span id="vector-text" class="status-text active">已連接</span>
+                    </div>
+                </div>
+
+                <div class="service-item">
+                    <div>
+                        <div class="service-name">🔥 Firebase</div>
+                        <div class="service-desc">使用者資料存儲</div>
+                    </div>
+                    <div class="service-status">
+                        <span id="firebase-status" class="status-dot inactive"></span>
+                        <span id="firebase-text" class="status-text inactive">未配置</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-box">
+                    <div id="nutrition-count" class="info-value">0</div>
+                    <div class="info-label">營養資料</div>
+                </div>
+                <div class="info-box">
+                    <div id="uptime" class="info-value">--</div>
+                    <div class="info-label">運行時間</div>
+                </div>
+            </div>
+
+            <center>
+                <button class="refresh-btn" onclick="loadStatus()">🔄 重新整理</button>
+            </center>
+        </div>
+
+        <div class="footer">
+            <p>Powered by Flask × YOLO × Gemini × LM Studio</p>
+            <p id="timestamp" style="margin-top: 5px; font-size: 12px;"></p>
+        </div>
+    </div>
+
+    <script>
+        async function loadStatus() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+
+                // 更新狀態徽章
+                const statusBadge = document.getElementById('statusBadge');
+                if (data.status === 'healthy') {
+                    statusBadge.className = 'status-badge healthy';
+                    statusBadge.textContent = '● 系統正常運行';
+                } else {
+                    statusBadge.className = 'status-badge warning';
+                    statusBadge.textContent = '⚠ 部分服務異常';
+                }
+
+                // 更新各服務狀態
+                updateService('yolo', data.services.yolo);
+                updateService('rag', data.services.rag);
+                updateService('vector', data.services.vector_store);
+                updateService('firebase', data.services.firebase);
+
+                // 更新資料數量
+                document.getElementById('nutrition-count').textContent =
+                    data.services.nutrition_data.toLocaleString();
+
+                // 更新時間戳
+                const timestamp = new Date(data.timestamp);
+                document.getElementById('timestamp').textContent =
+                    `最後更新: ${timestamp.toLocaleString('zh-TW')}`;
+
+                // 計算運行時間（簡化版）
+                document.getElementById('uptime').textContent = '正常';
+
+                // 顯示內容，隱藏載入中
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+
+            } catch (error) {
+                console.error('載入狀態失敗:', error);
+                document.getElementById('loading').innerHTML =
+                    '<p style="color: #ef4444;">❌ 無法連接到伺服器</p>';
+            }
+        }
+
+        function updateService(name, isActive) {
+            const statusDot = document.getElementById(`${name}-status`);
+            const statusText = document.getElementById(`${name}-text`);
+
+            if (isActive) {
+                statusDot.className = 'status-dot active';
+                statusText.className = 'status-text active';
+                statusText.textContent = name === 'vector' ? '已連接' : '運行中';
+            } else {
+                statusDot.className = 'status-dot inactive';
+                statusText.className = 'status-text inactive';
+                statusText.textContent = name === 'firebase' ? '未配置' : '離線';
+            }
+        }
+
+        // 頁面載入時執行
+        loadStatus();
+
+        // 每30秒自動更新
+        setInterval(loadStatus, 30000);
+    </script>
+</body>
+</html>

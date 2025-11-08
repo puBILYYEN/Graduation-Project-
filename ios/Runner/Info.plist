@@ -45,14 +45,5 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<!-- 相機權限 -->
-	<key>NSCameraUsageDescription</key>
-	<string>此應用需要使用相機來拍照記錄飲食</string>
-	<!-- 相簿存取權限 -->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>此應用需要存取相簿來選擇和保存照片</string>
-	<!-- 相簿寫入權限 -->
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>此應用需要將拍攝的照片保存到相簿</string>
 </dict>
 </plist>

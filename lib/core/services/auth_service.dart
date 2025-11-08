@@ -2,12 +2,13 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart'; // 新增這行
 
 // ===================================================================
 // 認證服務 (AuthService)
 // ===================================================================
 /// 封裝所有 Firebase Authentication 相關邏輯的服務類別
-class AuthService {
+class AuthService extends ChangeNotifier {
   // -------------------------------------------------------------------
   // Properties
   // -------------------------------------------------------------------

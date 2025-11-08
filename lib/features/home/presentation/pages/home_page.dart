@@ -1,11 +1,14 @@
 // ----- [pages/home/home_page.dart] 開始 -----
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import '../../../nutrition/data/models/nutrient_data.dart';
 import '../../data/models/chat_message.dart';
 import '../../../../core/services/api/socket_service.dart';
 import '../../../auth/presentation/pages/login_page.dart';
+import '../widgets/side_menu.dart';
 import 'dart:async';
+import '../../../../core/services/app_logger.dart';
 
 class HomePageContent extends StatefulWidget {
   const HomePageContent({super.key});
@@ -37,12 +40,19 @@ class _HomePageContentState extends State<HomePageContent> {
   StreamSubscription<bool>? _connectionSubscription;
   StreamSubscription<Map<String, dynamic>>? _responseSubscription;
 
+  // AI 對話歷史記錄
+  List<ChatMessage> _conversationHistory = [];
+
+  // 訊息輸入控制器
+  final TextEditingController _messageController = TextEditingController();
+
   // ====================================================================
   // 首頁建構方法和主要 UI
   // ====================================================================
   @override
   void initState() {
     super.initState();
+    AppLogger.logEvent('首頁初始化');
     _initializeSocket();
   }
 
@@ -50,11 +60,15 @@ class _HomePageContentState extends State<HomePageContent> {
   void dispose() {
     _connectionSubscription?.cancel();
     _responseSubscription?.cancel();
+    _messageController.dispose();
     super.dispose();
   }
 
   /// 初始化 Socket.IO 連接
   void _initializeSocket() async {
+    // Flask-SocketIO 伺服器已啟動，啟用連接
+    print('正在連接 Flask Socket.IO RAG 伺服器...');
+
     // 監聽連接狀態
     _connectionSubscription = _socketService.connectionStatus.listen((connected) {
       if (mounted) {
@@ -85,6 +99,14 @@ class _HomePageContentState extends State<HomePageContent> {
           backgroundColor: Colors.orange,
         ),
       );
+    } else if (connected && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('已連接到 AI 營養助手'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -99,14 +121,20 @@ class _HomePageContentState extends State<HomePageContent> {
 
     return Scaffold(
       backgroundColor: Colors.grey[50], // 設定頁面背景為淺灰色
+      drawer: const SideMenu(), // 側邊選單
       appBar: AppBar(
         // 頂部應用程式列
         backgroundColor: Colors.transparent, // 透明背景
         elevation: 0, // 無陰影效果
-        // 左側選單按鈕
-        leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.grey[800]), // 選單圖示
-          onPressed: () {}, // 暫時無功能
+        // 左側選單按鈕 - 使用 Builder 來獲取正確的 context
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: Colors.grey[800]), // 選單圖示
+            onPressed: () async {
+              await AppLogger.logButtonClick('側邊選單按鈕');
+              Scaffold.of(context).openDrawer(); // 打開側邊選單
+            },
+          ),
         ),
         // 頁面標題
         title: Text(
@@ -122,9 +150,11 @@ class _HomePageContentState extends State<HomePageContent> {
         actions: [
           IconButton(
             icon: Icon(Icons.settings_outlined, color: Colors.grey[800]),
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => const LoginPage()),
+            onPressed: () async {
+              await AppLogger.logButtonClick('設置按鈕');
+              // TODO: 實現設置頁面導航
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('設置功能開發中')),
               );
             },
           ),
@@ -139,8 +169,12 @@ class _HomePageContentState extends State<HomePageContent> {
             _buildCalorieSection(),
             const SizedBox(height: 20),
 
-            // 宏量熱量比例
-            _buildMacroSection(),
+            // 宏量熱量比例 - 已註解：功能已整合到統計頁面的 NutritionPieChart
+            // _buildMacroSection(),
+            // const SizedBox(height: 20),
+
+            // 營養統計入口
+            _buildStatisticsCard(),
             const SizedBox(height: 20),
 
             // 個人化飲食建議
@@ -391,6 +425,7 @@ class _HomePageContentState extends State<HomePageContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 標題和助手資訊
           Text(
             '個人化飲食建議',
             style: TextStyle(
@@ -416,79 +451,237 @@ class _HomePageContentState extends State<HomePageContent> {
                 ),
               ),
               const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'AI 健康助手',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey[800],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI 健康助手',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[800],
+                      ),
                     ),
-                  ),
-                  Text(
-                    '為您量身打造營養建議',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
+                    Text(
+                      '為您量身打造營養建議',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
+          const SizedBox(height: 16),
+
+          // 對話歷史顯示區域（可滾動）
+          Container(
+            height: 300, // 擴大顯示區域
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[200]!),
+            ),
+            child: _conversationHistory.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.chat_bubble_outline,
+                          size: 48,
+                          color: Colors.grey[300],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          '尚無對話記錄',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '點擊下方輸入框開始諮詢',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _conversationHistory.length,
+                    itemBuilder: (context, index) {
+                      final message = _conversationHistory[index];
+                      return _buildChatBubble(message);
+                    },
+                  ),
+          ),
+
           const SizedBox(height: 12),
 
-          // 問題輸入區域 - 顯示連接狀態
-          GestureDetector(
-            onTap: _isConnected ? () {
-              _showQuestionDialog();
-            } : null,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isConnected ? Colors.grey[50] : Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _isConnected ? Colors.grey[200]! : Colors.grey[300]!,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _isConnecting
-                          ? '正在連接 AI 服務...'
-                          : _isConnected
-                              ? '有什麼營養問題想諮詢嗎？'
-                              : '無法連接到 AI 服務',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: _isConnected ? Colors.grey[500] : Colors.grey[400],
+          // 問題輸入區域
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _messageController,
+                  enabled: _isConnected,
+                  decoration: InputDecoration(
+                    hintText: _isConnecting
+                        ? '正在連接 AI 服務...'
+                        : _isConnected
+                            ? '有什麼營養問題想諮詢嗎？'
+                            : '無法連接到 AI 服務',
+                    filled: true,
+                    fillColor: _isConnected ? Colors.grey[50] : Colors.grey[100],
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: _isConnected ? Colors.grey[200]! : Colors.grey[300]!,
                       ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: _isConnected ? Colors.grey[200]! : Colors.grey[300]!,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.blue[300]!,
+                        width: 2,
+                      ),
+                    ),
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.grey[300]!,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: _isConnected ? Colors.grey[500] : Colors.grey[400],
                     ),
                   ),
-                  if (_isConnecting)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.grey[400],
-                      ),
-                    )
-                  else
-                    Icon(
-                      _isConnected ? Icons.mic_outlined : Icons.wifi_off_outlined,
-                      color: _isConnected ? Colors.grey[400] : Colors.red[300],
-                      size: 24,
-                    ),
+                  maxLines: null,
+                  minLines: 1,
+                  onSubmitted: _isConnected
+                      ? (value) {
+                          if (value.trim().isNotEmpty) {
+                            _handleAIQuestion(value.trim());
+                            _messageController.clear();
+                          }
+                        }
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // 發送按鈕
+              Container(
+                decoration: BoxDecoration(
+                  color: _isConnected && _messageController.text.trim().isNotEmpty
+                      ? Colors.blue[500]
+                      : Colors.grey[300],
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.send, color: Colors.white),
+                  onPressed: _isConnected
+                      ? () {
+                          final message = _messageController.text.trim();
+                          if (message.isNotEmpty) {
+                            _handleAIQuestion(message);
+                            _messageController.clear();
+                          }
+                        }
+                      : null,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 建立對話氣泡
+  Widget _buildChatBubble(ChatMessage message) {
+    final isUser = message.isUser;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment:
+            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (!isUser) ...[
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.blue[100],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.smart_toy,
+                size: 20,
+                color: Colors.blue[700],
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isUser ? Colors.blue[500] : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
+              ),
+              child: Text(
+                message.message,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isUser ? Colors.white : Colors.grey[800],
+                  height: 1.4,
+                ),
               ),
             ),
           ),
+          if (isUser) ...[
+            const SizedBox(width: 8),
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.person,
+                size: 20,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -620,10 +813,18 @@ class _HomePageContentState extends State<HomePageContent> {
       return;
     }
 
+    // 將用戶問題加入對話歷史
+    setState(() {
+      _conversationHistory.add(ChatMessage.user(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        message: question,
+      ));
+    });
+
     // 顯示正在處理的提示
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('正在處理您的問題：$question'),
+        content: Text('正在處理您的問題...'),
         backgroundColor: Colors.blue,
         duration: const Duration(seconds: 2),
       ),
@@ -643,10 +844,31 @@ class _HomePageContentState extends State<HomePageContent> {
           backgroundColor: Colors.red,
         ),
       );
+      // 將錯誤訊息也加入對話歷史
+      setState(() {
+        _conversationHistory.add(ChatMessage.error(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          errorMessage: response['message'] ?? '未知錯誤',
+        ));
+      });
     } else {
-      // 處理正常回應
+      // 處理正常回應 - 加入對話歷史
       final aiResponse = response['response'] ?? response['message'] ?? '收到回應';
-      _showAIResponse(response['question'] ?? '您的問題', aiResponse);
+      setState(() {
+        _conversationHistory.add(ChatMessage.aiResponse(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          message: aiResponse,
+        ));
+      });
+
+      // 顯示簡短通知
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('已收到 AI 回應'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 1),
+        ),
+      );
     }
   }
 
@@ -751,6 +973,79 @@ class _HomePageContentState extends State<HomePageContent> {
           ],
         );
       },
+    );
+  }
+
+  /// 營養統計入口卡片
+  Widget _buildStatisticsCard() {
+    return GestureDetector(
+      onTap: () async {
+        await AppLogger.logButtonClick('營養統計入口');
+        context.push('/statistics');
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blue[400]!, Colors.blue[600]!],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.bar_chart,
+                color: Colors.white,
+                size: 32,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '營養統計分析',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '查看詳細的營養攝取數據和趨勢',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white.withOpacity(0.8),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
