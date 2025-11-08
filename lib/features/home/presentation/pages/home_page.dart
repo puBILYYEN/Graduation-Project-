@@ -542,7 +542,7 @@ class _HomePageContentState extends State<HomePageContent> {
               Expanded(
                 child: TextField(
                   controller: _messageController,
-                  enabled: _isConnected,
+                  enabled: true,  // 始終啟用輸入框
                   decoration: InputDecoration(
                     hintText: _isConnecting
                         ? '正在連接 AI 服務...'
