@@ -56,7 +56,7 @@ dependencies:
   go_router: ^15.1.2
 
   # Networking
-  socket_io_client: ^2.0.3+1
+  socket_io_client: ^3.1.2  # 升級以修復 HTTPS 連接問題
   http: ^1.2.0
   intl: ^0.19.0
 

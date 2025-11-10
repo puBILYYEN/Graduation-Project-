@@ -79,7 +79,7 @@ class _HomePageContentState extends State<HomePageContent> {
 
   /// 初始化 Socket.IO 連接
   void _initializeSocket() async {
-    // Flask-SocketIO 伺服器已啟動，啟用連接
+    // 已升級到 socket_io_client 3.1.2 並添加 HttpOverrides，重新啟用連接
     print('正在連接 Flask Socket.IO RAG 伺服器...');
 
     // 監聽連接狀態

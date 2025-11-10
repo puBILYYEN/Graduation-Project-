@@ -37,15 +37,18 @@ class SocketService {
       }
 
       print('正在連接 Socket.IO 伺服器...');
+      print('URL: ${ApiEndpoints.baseUrl}');
 
+      // 使用 socket_io_client 3.x 的新 API
       _socket = IO.io(
         ApiEndpoints.baseUrl,
         IO.OptionBuilder()
-            .setTransports(['websocket'])
+            .setTransports(['websocket', 'polling'])  // 3.x 版本應優先使用 websocket
             .disableAutoConnect()
-            .setTimeout(5000)
-            .setReconnectionAttempts(3)
-            .setReconnectionDelay(1000)
+            .setTimeout(15000)  // 增加超時時間
+            .setReconnectionAttempts(5)
+            .setReconnectionDelay(2000)
+            .enableForceNew()
             .build(),
       );
 

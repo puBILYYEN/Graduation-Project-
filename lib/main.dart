@@ -1,6 +1,8 @@
 // ====================================================================
 // 主應用程式入口點 - Clean Architecture 版本
 // ====================================================================
+import 'dart:io';  // 用於 HttpOverrides
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -67,14 +69,36 @@ import 'features/exercise/presentation/viewmodels/exercise_viewmodel.dart';
 
 import 'firebase_options.dart';
 import 'core/services/app_logger.dart';
+
+// ====================================================================
+// HttpOverrides 類別 - 處理 HTTPS 證書問題（用於開發環境）
+// ====================================================================
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) {
+        // 在開發環境中允許所有證書（包括 ngrok 的證書）
+        // 生產環境應該移除此代碼或只允許特定的 host
+        return true;
+      };
+  }
+}
+
 // ====================================================================
 // 主函數 - 應用程式入口點
 // ====================================================================
 Future<void> main() async {
   // 確保Flutter綁定初始化完成
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 設置 HttpOverrides 以處理 HTTPS 證書問題（開發環境）
+  if (!kIsWeb) {
+    HttpOverrides.global = MyHttpOverrides();
+  }
+
   // 初始化日誌系統
-    await AppLogger.initialize();
+  await AppLogger.initialize();
   // 設定系統UI風格（這個可以同步執行）
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

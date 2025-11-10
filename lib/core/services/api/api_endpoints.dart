@@ -1,9 +1,9 @@
 /// API 端點配置
 class ApiEndpoints {
-  // Flask API 基礎 URL（透過 DevTunnel 連接到本地 Flask 服務）
+  // Flask API 基礎 URL（透過 ngrok 連接到本地 Flask 服務）
   // 本地開發：'http://127.0.0.1:5000'
-  // DevTunnel：'https://6j274tdx-5000.asse.devtunnels.ms'
-  static const String baseUrl = 'https://6j274tdx-5000.asse.devtunnels.ms';
+  // ngrok：'https://unreproachful-marginally-simone.ngrok-free.dev'
+  static const String baseUrl = 'https://unreproachful-marginally-simone.ngrok-free.dev';
 
   // 超時時間配置
   static const Duration timeout = Duration(seconds: 30);
