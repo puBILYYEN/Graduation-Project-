@@ -179,17 +179,31 @@ class _MyAppState extends State<MyApp> {
       builder: (context, snapshot) {
         debugPrint('📊 FutureBuilder 狀態: ${snapshot.connectionState}');
 
-        // 獲取 cameraService（可能為 null）
-        final cameraService = snapshot.data;
-        final isInitializing = snapshot.connectionState != ConnectionState.done;
-
-        if (isInitializing) {
+        // 初始化中：顯示簡單的載入畫面
+        if (snapshot.connectionState != ConnectionState.done) {
           debugPrint('⏳ 顯示初始化畫面');
-        } else {
-          debugPrint('✅ 初始化完成，建構 MultiProvider');
+          return MaterialApp(
+            title: '智慧營養追蹤應用程式',
+            debugShowCheckedModeBanner: false,
+            home: const Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('正在初始化應用程式...'),
+                  ],
+                ),
+              ),
+            ),
+          );
         }
 
-        // 使用單一 MaterialApp，根據初始化狀態顯示不同內容
+        // 初始化完成：建構完整的應用程式
+        debugPrint('✅ 初始化完成，建構 MultiProvider');
+        final cameraService = snapshot.data;
+
         return MultiProvider(
       providers: [
         // =======================================
@@ -335,32 +349,15 @@ class _MyAppState extends State<MyApp> {
           )..initialize(),
         ),
       ],
-      child: isInitializing
-          ? MaterialApp(
-              title: '智慧營養追蹤應用程式',
-              debugShowCheckedModeBanner: false,
-              home: const Scaffold(
-                body: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('正在初始化應用程式...'),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          : MaterialApp.router(
-              title: '智慧營養追蹤應用程式',
-              debugShowCheckedModeBanner: false,
-              theme: ThemeData(
-                primarySwatch: Colors.blue,
-                useMaterial3: true,
-              ),
-              routerConfig: AppRouter.router,
-            ),
+      child: MaterialApp.router(
+        title: '智慧營養追蹤應用程式',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          useMaterial3: true,
+        ),
+        routerConfig: AppRouter.router,
+      ),
     );
       },
     );
