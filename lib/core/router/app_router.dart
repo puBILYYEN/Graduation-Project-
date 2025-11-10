@@ -29,6 +29,9 @@ class AppRouter {
     // 初始路由位置
     initialLocation: '/',
 
+    // 添加調試日誌
+    debugLogDiagnostics: true,
+
     // 路由重新導向邏輯 (導航守衛)
     // redirect: (context, state) {
     //   final AuthRepository authRepository = context.read<AuthRepository>();
@@ -52,7 +55,10 @@ class AppRouter {
       // 登入頁面
       GoRoute(
         path: '/', // 根路徑
-        builder: (context, state) => const LoginPage(),
+        builder: (context, state) {
+          debugPrint('🚀 AppRouter: 正在建構 LoginPage');
+          return const LoginPage();
+        },
         routes: [
           // 註冊頁面 (作為登入頁的子路由)
           GoRoute(

@@ -18,14 +18,23 @@ class LoginPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('📱 LoginPage: build 被調用');
     // 使用 ChangeNotifierProvider 來建立和提供 LoginViewModel
     return ChangeNotifierProvider(
       create: (context) {
-        final authRepository = context.read<AuthRepository>();
-        return LoginViewModel(
-          SignInUseCase(authRepository),
-          GoogleSignInUseCase(authRepository),
-        );
+        debugPrint('📱 LoginPage: 正在建立 LoginViewModel');
+        try {
+          final authRepository = context.read<AuthRepository>();
+          debugPrint('📱 LoginPage: 成功獲取 AuthRepository');
+          return LoginViewModel(
+            SignInUseCase(authRepository),
+            GoogleSignInUseCase(authRepository),
+          );
+        } catch (e, stackTrace) {
+          debugPrint('❌ LoginPage: 獲取 AuthRepository 失敗: $e');
+          debugPrint('❌ StackTrace: $stackTrace');
+          rethrow;
+        }
       },
       child: const _LoginView(), // 將 UI 實作部分拆分出去
     );

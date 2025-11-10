@@ -151,22 +151,27 @@ class _MyAppState extends State<MyApp> {
         _cameraService = null;
       }
 
+      debugPrint('準備設置 _isInitialized = true');
       setState(() {
         _isInitialized = true;
       });
+      debugPrint('✅ setState 完成，_isInitialized = $_isInitialized');
     } catch (e) {
       debugPrint('服務初始化失敗: $e');
       // 即使初始化失敗，也要讓應用程式能夠啟動
       setState(() {
         _isInitialized = true;
       });
+      debugPrint('✅ 錯誤處理：setState 完成，_isInitialized = $_isInitialized');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('🔄 build 被調用，_isInitialized = $_isInitialized');
     // 只檢查初始化狀態，不檢查 _cameraService（Web 平台不需要相機）
     if (!_isInitialized) {
+      debugPrint('⏳ 顯示初始化畫面');
       return MaterialApp(
         title: '智慧營養追蹤應用程式',
         debugShowCheckedModeBanner: false,
@@ -184,6 +189,7 @@ class _MyAppState extends State<MyApp> {
         ),
       );
     }
+    debugPrint('✅ 初始化完成，建構 MultiProvider');
     return MultiProvider(
       providers: [
         // =======================================
