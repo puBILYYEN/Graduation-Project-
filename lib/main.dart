@@ -112,7 +112,7 @@ Future<void> main() async {
 }
 
 // ====================================================================
-// 主應用程式類別
+// 主應用程式類別 - 使用 StatefulWidget + FutureBuilder 支援熱重載
 // ====================================================================
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -122,82 +122,82 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  late Future<void> _initializationFuture;
-  CameraService? _cameraService;
-  bool _isInitialized = false;
+  late final Future<CameraService?> _initializationFuture;
 
   @override
   void initState() {
     super.initState();
+    // 在 initState 中初始化 Future，確保只執行一次
     _initializationFuture = _initializeServices();
   }
 
-  Future<void> _initializeServices() async {
+  /// 初始化服務並返回 CameraService（如果需要）
+  /// 使用 Future 而非直接在 initState 中執行，確保 FutureBuilder 能正確追蹤狀態
+  Future<CameraService?> _initializeServices() async {
     try {
-      // 初始化 Firebase
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      debugPrint('Firebase 初始化成功');
+      debugPrint('🚀 開始初始化服務...');
+
+      // 初始化 Firebase（檢查是否已初始化，避免重複）
+      try {
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        debugPrint('✅ Firebase 初始化成功');
+      } catch (e) {
+        // Firebase 可能已經初始化，這不是錯誤
+        if (e.toString().contains('duplicate-app')) {
+          debugPrint('ℹ️ Firebase 已經初始化，跳過');
+        } else {
+          debugPrint('⚠️ Firebase 初始化警告: $e');
+        }
+      }
 
       // 只在非 Web 平台初始化相機服務
       if (!kIsWeb) {
-        _cameraService = CameraService();
-        await _cameraService!.initializeCameras();
-        debugPrint('相機服務初始化成功');
+        final cameraService = CameraService();
+        await cameraService.initializeCameras();
+        debugPrint('✅ 相機服務初始化成功');
+        return cameraService;
       } else {
-        debugPrint('Web 平台：跳過相機初始化');
-        // Web 平台不需要相機服務，設為 null
-        _cameraService = null;
+        debugPrint('ℹ️ Web 平台：跳過相機初始化');
+        return null;
       }
-
-      debugPrint('準備設置 _isInitialized = true');
-      setState(() {
-        _isInitialized = true;
-      });
-      debugPrint('✅ setState 完成，_isInitialized = $_isInitialized');
-    } catch (e) {
-      debugPrint('服務初始化失敗: $e');
-      // 即使初始化失敗，也要讓應用程式能夠啟動
-      setState(() {
-        _isInitialized = true;
-      });
-      debugPrint('✅ 錯誤處理：setState 完成，_isInitialized = $_isInitialized');
+    } catch (e, stackTrace) {
+      debugPrint('❌ 服務初始化失敗: $e');
+      debugPrint('❌ StackTrace: $stackTrace');
+      // 即使初始化失敗，也返回 null 讓應用程式能夠啟動
+      return null;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('🔄 build 被調用，_isInitialized = $_isInitialized');
-    // 只檢查初始化狀態，不檢查 _cameraService（Web 平台不需要相機）
-    if (!_isInitialized) {
-      debugPrint('⏳ 顯示初始化畫面');
-      return MaterialApp(
-        title: '智慧營養追蹤應用程式',
-        debugShowCheckedModeBanner: false,
-        home: const Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在初始化應用程式...'),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    debugPrint('✅ 初始化完成，建構 MultiProvider');
-    return MultiProvider(
+    debugPrint('🔄 MyApp.build 被調用');
+
+    return FutureBuilder<CameraService?>(
+      future: _initializationFuture,  // 使用緩存的 Future
+      builder: (context, snapshot) {
+        debugPrint('📊 FutureBuilder 狀態: ${snapshot.connectionState}');
+
+        // 獲取 cameraService（可能為 null）
+        final cameraService = snapshot.data;
+        final isInitializing = snapshot.connectionState != ConnectionState.done;
+
+        if (isInitializing) {
+          debugPrint('⏳ 顯示初始化畫面');
+        } else {
+          debugPrint('✅ 初始化完成，建構 MultiProvider');
+        }
+
+        // 使用單一 MaterialApp，根據初始化狀態顯示不同內容
+        return MultiProvider(
       providers: [
         // =======================================
         // Core Services
         // =======================================
         // 只在非 Web 平台提供 CameraService
-        if (_cameraService != null)
-          Provider<CameraService>.value(value: _cameraService!),
+        if (cameraService != null)
+          Provider<CameraService>.value(value: cameraService),
         Provider<FirestoreService>(create: (_) => FirestoreService()),
 
         // =======================================
@@ -335,15 +335,34 @@ class _MyAppState extends State<MyApp> {
           )..initialize(),
         ),
       ],
-      child: MaterialApp.router(
-        title: '智慧營養追蹤應用程式',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          useMaterial3: true,
-        ),
-        routerConfig: AppRouter.router,
-      ),
+      child: isInitializing
+          ? MaterialApp(
+              title: '智慧營養追蹤應用程式',
+              debugShowCheckedModeBanner: false,
+              home: const Scaffold(
+                body: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('正在初始化應用程式...'),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          : MaterialApp.router(
+              title: '智慧營養追蹤應用程式',
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                primarySwatch: Colors.blue,
+                useMaterial3: true,
+              ),
+              routerConfig: AppRouter.router,
+            ),
+    );
+      },
     );
   }
 }
