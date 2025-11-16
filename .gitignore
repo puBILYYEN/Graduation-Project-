@@ -92,6 +92,7 @@ desktop.ini
 *.tmp
 *.temp
 *~
+nul
 
 # 忽略資料夾
 ignore/
