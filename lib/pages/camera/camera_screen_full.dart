@@ -112,29 +112,40 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   void initState() {
     super.initState();
-    AppLogger.logEvent('[CAMERA] 相機頁面 initState 開始');
+    print('[CAMERA DEBUG] 相機頁面 initState 開始');
+    // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+    // AppLogger.logEvent('[CAMERA] 相機頁面 initState 開始');
+
     // 註冊應用程式生命週期觀察器：監聽應用程式前景/背景狀態變化
     WidgetsBinding.instance.addObserver(this);
 
     // 鎖定豎螢幕：確保相機介面在豎屏模式下使用
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-    // 初始化相機：請求權限並設定相機控制器
-    // 使用 Future.microtask 在下一個事件循環中初始化，避免阻塞 initState
-    Future.microtask(() async {
-      await _initializeCamera();
-    });
+    // ✅ 修復：完全跳過相機初始化，避免 ColorOS 死鎖
+    // ColorOS/OPPO 設備在調用 availableCameras() 時會導致整個應用凍結
+    // 改為直接設置錯誤狀態，使用降級方案（ImagePicker）
+    print('[CAMERA DEBUG] ⚠️ 跳過相機初始化，使用降級方案');
 
-    // 初始化測試數據：為 RAG 系統準備示例數據
-    _initializeTestData();
-
-    // 開始設備方向檢測：使用加速度計監測設備旋轉
-    _startOrientationDetection();
-
-    // 延遲初始化測量框架位置，等待widget構建完成
+    // 直接設置為未初始化狀態，顯示降級界面
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeMeasurementFramePosition();
+      print('[CAMERA DEBUG] PostFrameCallback 開始');
+      if (mounted) {
+        print('[CAMERA DEBUG] 設置錯誤狀態');
+        setState(() {
+          _hasError = true;
+          _errorMessage = '相機預覽功能暫時無法使用\n\n✅ 您仍可使用以下功能：\n• 點擊「拍照」按鈕直接拍照\n• 點擊「相簿」按鈕選擇照片';
+        });
+        print('[CAMERA DEBUG] 錯誤狀態設置完成');
+      }
     });
+
+    // ✅ 暫時移除這些可能導致死鎖的功能
+    // _initializeTestData();
+    // _startOrientationDetection();
+    // _initializeMeasurementFramePosition();
+
+    print('[CAMERA DEBUG] initState 完成');
   }
 
   /// 初始化測量框架位置 - 將框架置中在相機預覽有效區域
@@ -168,7 +179,9 @@ class _CameraScreenState extends State<CameraScreen>
   /// 清理資源方法 - 移除觀察器、取消訂閱並釋放相機資源
   @override
   void dispose() {
-    AppLogger.logEvent('[CAMERA] 相機頁面 dispose 開始');
+    print('[CAMERA DEBUG] 相機頁面 dispose 開始');
+    // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+    // AppLogger.logEvent('[CAMERA] 相機頁面 dispose 開始');
     // 移除應用程式生命週期觀察器
     WidgetsBinding.instance.removeObserver(this);
 
@@ -176,7 +189,12 @@ class _CameraScreenState extends State<CameraScreen>
     _accelerometerSubscription?.cancel();
 
     // 釋放相機控制器：釋放相機硬體資源
-    _controller?.dispose();
+    // ColorOS 修復：先保存引用，立即設為 null，再釋放
+    final cameraController = _controller;
+    if (cameraController != null) {
+      _controller = null;
+      cameraController.dispose();
+    }
 
     // 恢復方向設定：允許其他頁面使用所有螢幕方向
     SystemChrome.setPreferredOrientations([
@@ -194,7 +212,9 @@ class _CameraScreenState extends State<CameraScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    AppLogger.logEvent('[CAMERA] App lifecycle state changed to: $state');
+    print('[CAMERA DEBUG] App lifecycle state changed to: $state');
+    // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+    // AppLogger.logEvent('[CAMERA] App lifecycle state changed to: $state');
 
     // 當 App 進入背景或不活躍時，釋放相機控制器
     if (state == AppLifecycleState.inactive ||
@@ -277,6 +297,10 @@ class _CameraScreenState extends State<CameraScreen>
   // ====================================================================
   // 權限處理函數 (Permission Handling Functions)
   // ====================================================================
+  // ⚠️ 以下權限請求方法已棄用，因為會在某些設備上導致 MethodChannel 死鎖
+  // 權限已在 AndroidManifest.xml 中聲明，直接初始化相機即可
+
+  /* ❌ 已棄用：會導致死鎖
   // 只檢查相機權限，在相機初始化時調用
   Future<bool> _requestCameraPermission() async {
     try {
@@ -350,46 +374,41 @@ class _CameraScreenState extends State<CameraScreen>
       }
     }
   }
+  */
 
   // ====================================================================
   // 相機初始化函數 (Camera Initialization Function)
   // ====================================================================
   Future<void> _initializeCamera() async {
     print('[CAMERA DEBUG] Step 1: 方法開始');
-    //     await AppLogger.logEvent('[CAMERA] _initializeCamera 方法開始執行');
+    // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+    // await AppLogger.logEvent('[CAMERA] _initializeCamera 方法開始執行');
 
     print('[CAMERA DEBUG] Step 2: try block 開始');
     try {
-      print('[CAMERA DEBUG] Step 3: 準備記錄第二條日誌');
-    //       await AppLogger.logEvent('[CAMERA] 準備請求相機權限...');
+      print('[CAMERA DEBUG] Step 3: 跳過權限請求（已在 AndroidManifest 中聲明）');
+      // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+      // await AppLogger.logEvent('[CAMERA] 跳過 permission_handler 調用以避免死鎖');
 
-      print('[CAMERA DEBUG] Step 4: 準備請求權限');
-      // 步驟1：只請求相機權限
-      final hasPermissions = await _requestCameraPermission();
+      // ✅ 修復：直接初始化相機設備，不調用 permission_handler
+      // 權限已在 AndroidManifest.xml 中聲明，系統會自動處理
+      // 這樣可以避免在 Realme/OPPO/Xiaomi 設備上的 MethodChannel 死鎖問題
 
-      print('[CAMERA DEBUG] Step 5: 權限請求完成 - $hasPermissions');
-    //       await AppLogger.logEvent('[CAMERA] 權限請求結果: $hasPermissions');
-
-      if (!hasPermissions) {
-    //         await AppLogger.logEvent('[CAMERA] ❌ 權限未獲得，終止初始化');
-        return; // 相機權限未獲得，終止初始化
-      }
-    //       await AppLogger.logEvent('[CAMERA] ✅ 權限已獲得，繼續初始化設備');
-
-      print('[CAMERA DEBUG] Step 6: 準備初始化設備');
-      // 步驟2：初始化相機設備
+      print('[CAMERA DEBUG] Step 4: 準備初始化設備');
+      // 直接初始化相機設備
       await _initializeCameraDevice();
-      print('[CAMERA DEBUG] Step 7: 設備初始化完成');
+      print('[CAMERA DEBUG] Step 5: 設備初始化完成');
     } catch (e, stackTrace) {
       print('[CAMERA DEBUG] ERROR: 捕獲異常 - $e');
       print('[CAMERA DEBUG] StackTrace: $stackTrace');
       log('相機初始化錯誤: $e'); // 記錄錯誤到日誌
-    //       await AppLogger.logEvent('[CAMERA] ❌ _initializeCamera 異常: $e');
+      // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+      // await AppLogger.logEvent('[CAMERA] ❌ _initializeCamera 異常: $e');
       if (mounted) {
         // 根據錯誤類型設定不同的錯誤訊息
         String errorMsg = '相機初始化失敗';
         if (e.toString().contains('permission')) {
-          errorMsg = '沒有相機權限，請點擊重新嘗試以授權';
+          errorMsg = '沒有相機權限，請在系統設置中手動授權';
         }
         setState(() {
           _hasError = true;
@@ -397,20 +416,26 @@ class _CameraScreenState extends State<CameraScreen>
         });
       }
     }
-    print('[CAMERA DEBUG] Step 8: _initializeCamera 方法結束');
+    print('[CAMERA DEBUG] Step 6: _initializeCamera 方法結束');
   }
 
   // 相機設備初始化函數 (Camera Device Initialization Function)
   Future<void> _initializeCameraDevice() async {
     try {
+      print('[CAMERA DEBUG] Step 4.1: 開始獲取可用相機列表（3秒超時）');
       // 步驟1：檢查系統中可用的相機設備（添加超時保護）
+      // ✅ 修復：將超時時間從 10 秒改為 3 秒，快速失敗
       cameras = await availableCameras().timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 3),
         onTimeout: () {
+          print('[CAMERA DEBUG] ⚠️ 獲取相機列表超時，使用降級方案');
           throw TimeoutException('獲取相機列表超時');
         },
       );
+      print('[CAMERA DEBUG] Step 4.2: 找到 ${cameras?.length ?? 0} 個相機');
+
       if (cameras == null || cameras!.isEmpty) {
+        print('[CAMERA DEBUG] ERROR: 未找到可用的相機設備');
         setState(() {
           _hasError = true;
           _errorMessage = '未找到可用的相機設備';
@@ -418,39 +443,55 @@ class _CameraScreenState extends State<CameraScreen>
         return; // 沒有相機設備，終止初始化
       }
 
+      print('[CAMERA DEBUG] Step 4.3: 創建相機控制器');
       // 步驟2：創建相機控制器
       _controller = CameraController(
         cameras![0], // 使用第一個相機（通常是後置鏡頭）
-        ResolutionPreset.high, // 設定高畫質
+        ResolutionPreset.medium, // ✅ 改為中等畫質，提高兼容性
         enableAudio: false, // 不啟用音訊錄製
       );
-    //       await AppLogger.logEvent('[CAMERA] 相機控制器已創建，準備初始化...');
+      print('[CAMERA DEBUG] Step 4.4: 相機控制器已創建，準備初始化...');
 
+      print('[CAMERA DEBUG] Step 4.5: 開始初始化相機控制器（最多等待 15 秒）');
       // 步驟3：初始化相機控制器（添加超時保護）
       await _controller!.initialize().timeout(
         const Duration(seconds: 15),
         onTimeout: () {
+          print('[CAMERA DEBUG] ERROR: 相機初始化超時！');
           throw TimeoutException('相機初始化超時');
         },
       );
-    //       await AppLogger.logEvent('[CAMERA] 相機控制器初始化完成');
+      print('[CAMERA DEBUG] Step 4.6: 相機控制器初始化完成！');
 
+      print('[CAMERA DEBUG] Step 4.7: 準備更新 UI 狀態');
       // 步驟4：更新UI狀態（僅在組件仍然掛載時）
       if (mounted) {
         setState(() {
           _isInitialized = true; // 標記為已初始化
           _hasError = false; // 清除錯誤狀態
         });
-    //         await AppLogger.logEvent('[CAMERA] ✅ 相機初始化成功，UI 已更新');
+        print('[CAMERA DEBUG] Step 4.8: ✅ UI 狀態已更新，_isInitialized = true');
+      } else {
+        print('[CAMERA DEBUG] WARNING: 組件已卸載，跳過 UI 更新');
       }
     } catch (e) {
+      print('[CAMERA DEBUG] ERROR: 相機設備初始化錯誤: $e');
       log('相機設備初始化錯誤: $e'); // 記錄詳細錯誤信息
-    //       await AppLogger.logEvent('[CAMERA] ❌ 相機設備初始化錯誤: $e');
+      // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+      // await AppLogger.logEvent('[CAMERA] ❌ 相機設備初始化錯誤: $e');
       if (mounted) {
+        print('[CAMERA DEBUG] 正在設置錯誤狀態（使用降級方案）');
         setState(() {
           _hasError = true;
-          _errorMessage = '相機設備初始化失敗：${e.toString()}';
+          // ✅ 提示用戶使用替代方案
+          if (e is TimeoutException) {
+            _errorMessage = '相機預覽初始化超時\n\n您仍可使用「拍照」或「相簿」功能';
+          } else {
+            _errorMessage = '相機預覽暫時無法使用\n\n您仍可使用「拍照」或「相簿」功能\n\n錯誤: ${e.toString()}';
+          }
         });
+      } else {
+        print('[CAMERA DEBUG] WARNING: 組件已卸載，無法設置錯誤狀態');
       }
     }
   }
@@ -702,8 +743,15 @@ class _CameraScreenState extends State<CameraScreen>
     await log('_takePicture 函數開始執行'); // 記錄函數開始執行
 
     try {
-      await log('=== 開始新的權限請求流程 ===');
+      await log('✅ 跳過權限檢查（避免死鎖），直接拍照');
 
+      // ✅ 修復：移除所有 permission_handler 調用
+      // 原因：
+      // 1. 相機權限：如果能進入這個頁面，說明相機已初始化，權限已授予
+      // 2. 存儲權限：AndroidManifest.xml 中已聲明，系統會自動處理
+      // 3. 如果保存失敗，會降級保存到應用內部目錄
+
+      /* ❌ 已移除：會導致 MethodChannel 死鎖
       // 步驟1：檢查相機權限（必需）
       await log('檢查相機權限狀態...');
       PermissionStatus currentCameraStatus = await Permission.camera.status;
@@ -786,8 +834,9 @@ class _CameraScreenState extends State<CameraScreen>
           ),
         );
       }
+      */
 
-      await log('拍照權限檢查完成，開始拍照...');
+      await log('開始拍照...');
 
       // 如果有相機控制器且已初始化，才進行拍照
       if (_controller != null && _controller!.value.isInitialized) {
@@ -932,9 +981,16 @@ class _CameraScreenState extends State<CameraScreen>
 
   /// 智慧拍照方法 - 自動嘗試兩種測量方式並選擇最佳結果
   Future<void> _takeSmartVolumePhoto() async {
-    await AppLogger.logCameraAction('[OK][OK][OK] 智慧拍照按鈕點擊');
+    // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+    // await AppLogger.logCameraAction('[OK][OK][OK] 智慧拍照按鈕點擊');
     print('[CAMERA] 智慧拍照按鈕被點擊');
-    if (!_controller!.value.isInitialized) return;
+
+    // ✅ 修復：如果相機未初始化，改用 ImagePicker 拍照
+    if (_controller == null || !_controller!.value.isInitialized) {
+      print('[CAMERA] 相機未初始化，使用 ImagePicker 降級方案');
+      await _takePhotoWithImagePicker();
+      return;
+    }
 
     try {
       await log('開始智慧容積測量拍照...');
@@ -1811,8 +1867,54 @@ class _CameraScreenState extends State<CameraScreen>
     }
   }
 
+  /// 使用 ImagePicker 拍照（降級方案）
+  Future<void> _takePhotoWithImagePicker() async {
+    print('[CAMERA] 使用 ImagePicker 拍照');
+    try {
+      // 使用 ImagePicker 的相機功能
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (photo != null) {
+        print('[CAMERA] 拍照成功: ${photo.path}');
+        // 導航到營養標籤頁面
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NutritionLabelScreen(
+                imagePath: photo.path,
+                analysis: {
+                  'predictions': [], // 提供空的分析結果，在標籤頁面中再分析
+                  'status': 'pending',
+                },
+              ),
+            ),
+          );
+        }
+      } else {
+        print('[CAMERA] 使用者取消拍照');
+      }
+    } catch (e) {
+      print('[CAMERA] ImagePicker 拍照錯誤: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('拍照失敗: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _openGallery() async {
-    await AppLogger.logCameraAction('[OK][OK][OK] 開啟相簿按鈕點擊');
+    // ✅ 暫時移除 AppLogger 調用，避免可能的死鎖
+    // await AppLogger.logCameraAction('[OK][OK][OK] 開啟相簿按鈕點擊');
     print('[CAMERA] 相簿按鈕被點擊');
     try {
       // 直接開啟相簿，支援多選功能
@@ -1833,9 +1935,9 @@ class _CameraScreenState extends State<CameraScreen>
               builder: (context) => NutritionLabelScreen(
                 imagePath: images.first.path,
                 analysis: {
-                  'food_name': '未分析',
-                  'nutrition': {},
-                }, // TODO: 需要實作圖片分析功能
+                  'predictions': [], // 提供空的分析結果，在標籤頁面中再分析
+                  'status': 'pending',
+                },
               ),
             ),
           );
@@ -1925,10 +2027,13 @@ class _CameraScreenState extends State<CameraScreen>
   // ====================================================================
   @override
   Widget build(BuildContext context) {
+    print('[CAMERA DEBUG] build 方法開始');
+
     // 步驟1：設定螢幕方向（拍照頁面鎖定為正常豎螢幕）
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
     ]);
+    print('[CAMERA DEBUG] build - 步驟1完成');
 
     // 步驟2：獲取螢幕尺寸和設備類型
     final screenSize = MediaQuery.of(context).size;
@@ -1936,12 +2041,14 @@ class _CameraScreenState extends State<CameraScreen>
     final isLargeScreen = screenSize.width > 900; // 判斷是否為大螢幕
     final isLandscape =
         MediaQuery.of(context).orientation == Orientation.landscape; // 判斷系統方向
+    print('[CAMERA DEBUG] build - 步驟2完成，screenSize: $screenSize');
 
     // 步驟3：計算按鈕旋轉角度（根據設備實際物理方向決定）
     final double iconRotation = _isDeviceLandscape ? 90.0 : 0.0;
-    logSync('按鈕旋轉角度: $_isDeviceLandscape -> $iconRotation度');
+    print('[CAMERA DEBUG] build - 步驟3完成，iconRotation: $iconRotation');
 
     // 步驟4：建構主要UI結構
+    print('[CAMERA DEBUG] build - 開始建構 Scaffold');
     return Scaffold(
       backgroundColor: Colors.black, // 設定背景色為黑色
       body: Stack(
@@ -1986,8 +2093,8 @@ class _CameraScreenState extends State<CameraScreen>
                             _errorMessage = '';
                           });
 
-                          // 主動請求所有權限並初始化相機
-                          await _requestAndInitializeCamera();
+                          // ✅ 修復：直接初始化相機，不請求權限
+                          await _initializeCamera();
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,

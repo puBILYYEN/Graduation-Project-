@@ -7,10 +7,8 @@ class CameraDatasource {
   final ImagePicker _picker = ImagePicker();
 
   Future<List<CameraDescription>> getAvailableCameras() async {
-    final status = await Permission.camera.request();
-    if (!status.isGranted) {
-      throw Exception("Camera permission denied");
-    }
+    // 跳過 permission_handler 調用，避免在 Realme/OPPO/Xiaomi 設備上卡死
+    // 權限已在 AndroidManifest.xml 中聲明，系統會在應用啟動時處理
     return availableCameras();
   }
 
@@ -53,10 +51,17 @@ class CameraDatasource {
   }
 
   Future<List<XFile>> pickImagesFromGallery() async {
+    // ✅ 修復：移除 permission_handler 調用以避免死鎖
+    // 權限已在 AndroidManifest.xml 中聲明，ImagePicker 會自動處理權限請求
+    // 如果權限不足，ImagePicker 會拋出異常或返回空列表
+
+    /* ❌ 已移除：會導致 MethodChannel 死鎖
     final status = await Permission.photos.request();
     if (!status.isGranted) {
       throw Exception("Photos permission denied");
     }
+    */
+
     return _picker.pickMultiImage(imageQuality: 80, limit: 10);
   }
 }

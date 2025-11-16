@@ -152,16 +152,21 @@ class _MyAppState extends State<MyApp> {
         }
       }
 
+      // 註解：暫時停用相機服務初始化，避免與 camera_screen_full.dart 資源衝突
       // 只在非 Web 平台初始化相機服務
-      if (!kIsWeb) {
-        final cameraService = CameraService();
-        await cameraService.initializeCameras();
-        debugPrint('✅ 相機服務初始化成功');
-        return cameraService;
-      } else {
-        debugPrint('ℹ️ Web 平台：跳過相機初始化');
-        return null;
-      }
+      // if (!kIsWeb) {
+      //   final cameraService = CameraService();
+      //   await cameraService.initializeCameras();
+      //   debugPrint('✅ 相機服務初始化成功');
+      //   return cameraService;
+      // } else {
+      //   debugPrint('ℹ️ Web 平台：跳過相機初始化');
+      //   return null;
+      // }
+
+      // 相機初始化移至 camera_screen_full.dart 內部處理
+      debugPrint('ℹ️ 跳過全局相機初始化（由相機頁面獨立管理）');
+      return null;
     } catch (e, stackTrace) {
       debugPrint('❌ 服務初始化失敗: $e');
       debugPrint('❌ StackTrace: $stackTrace');
@@ -209,9 +214,10 @@ class _MyAppState extends State<MyApp> {
         // =======================================
         // Core Services
         // =======================================
+        // 註解：暫時停用 CameraService Provider（相機由 camera_screen_full.dart 獨立管理）
         // 只在非 Web 平台提供 CameraService
-        if (cameraService != null)
-          Provider<CameraService>.value(value: cameraService),
+        // if (cameraService != null)
+        //   Provider<CameraService>.value(value: cameraService),
         Provider<FirestoreService>(create: (_) => FirestoreService()),
 
         // =======================================
@@ -314,21 +320,22 @@ class _MyAppState extends State<MyApp> {
             context.read<AddFoodEntryUseCase>(),
           ),
         ),
+        // 註解：暫時停用 CameraViewModel Provider（相機由 camera_screen_full.dart 獨立管理）
         // 只在非 Web 平台提供 CameraViewModel
-        if (!kIsWeb)
-          ChangeNotifierProvider<CameraViewModel>(
-            create: (context) => CameraViewModel(
-              getAvailableCamerasUseCase: context.read<GetAvailableCamerasUseCase>(),
-              initializeCameraUseCase: context.read<InitializeCameraUseCase>(),
-              takePictureUseCase: context.read<TakePictureUseCase>(),
-              toggleFlashUseCase: context.read<ToggleFlashUseCase>(),
-              switchCameraUseCase: context.read<SwitchCameraUseCase>(),
-              pickImagesFromGalleryUseCase: context.read<PickImagesFromGalleryUseCase>(),
-              analyzeImageUseCase: context.read<AnalyzeImageUseCase>(),
-              performVolumeCalculationUseCase: context.read<PerformVolumeCalculationUseCase>(),
-              cameraService: context.read<CameraService>(),
-            ),
-          ),
+        // if (!kIsWeb)
+        //   ChangeNotifierProvider<CameraViewModel>(
+        //     create: (context) => CameraViewModel(
+        //       getAvailableCamerasUseCase: context.read<GetAvailableCamerasUseCase>(),
+        //       initializeCameraUseCase: context.read<InitializeCameraUseCase>(),
+        //       takePictureUseCase: context.read<TakePictureUseCase>(),
+        //       toggleFlashUseCase: context.read<ToggleFlashUseCase>(),
+        //       switchCameraUseCase: context.read<SwitchCameraUseCase>(),
+        //       pickImagesFromGalleryUseCase: context.read<PickImagesFromGalleryUseCase>(),
+        //       analyzeImageUseCase: context.read<AnalyzeImageUseCase>(),
+        //       performVolumeCalculationUseCase: context.read<PerformVolumeCalculationUseCase>(),
+        //       cameraService: context.read<CameraService>(),
+        //     ),
+        //   ),
         ChangeNotifierProvider<BodyAnalysisViewModel>(
           create: (context) => BodyAnalysisViewModel(
             context.read<GetBodyMetricsUseCase>(),

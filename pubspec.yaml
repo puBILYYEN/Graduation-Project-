@@ -35,7 +35,7 @@ dependencies:
   camera: ^0.10.5+5
   path_provider: ^2.1.1
   image_picker: ^1.1.2
-  permission_handler: ^12.0.1
+  permission_handler: ^12.0.1  # 保留但不使用（避免 MethodChannel 死鎖）
   sensors_plus: ^3.1.0
   path: ^1.8.3
   image_gallery_saver_plus: ^3.0.5  # 用於將照片儲存到相簿

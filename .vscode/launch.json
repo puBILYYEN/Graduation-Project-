@@ -2,7 +2,30 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Flutter",
+            "name": "Flutter (Debug Mode)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "RMX3867",
+            "args": [
+                "--no-hot"
+            ]
+        },
+        {
+            "name": "Flutter (Profile Mode)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "RMX3867",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "Flutter (Release Mode)",
+            "request": "launch",
+            "type": "dart",
+            "deviceId": "RMX3867",
+            "flutterMode": "release"
+        },
+        {
+            "name": "Flutter (Debug - Auto Select)",
             "request": "launch",
             "type": "dart"
         }
