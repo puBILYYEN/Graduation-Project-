@@ -431,18 +431,23 @@ def handle_nutrition_data(data):
         emit('error', {'message': str(e)})
 
 
-# ===== 啟動應用 =====
-if __name__ == '__main__':
-    # 初始化服務
-    initialize_services()
+# ===== 應用啟動時初始化服務 =====
+# 注意：必須在模組級別執行，確保 gunicorn 也能初始化
+logger.info("=" * 60)
+logger.info("開始初始化服務...")
+logger.info("=" * 60)
+initialize_services()
+logger.info("✓ 服務初始化完成")
 
+# ===== 僅用於本地開發的啟動方式 =====
+if __name__ == '__main__':
     logger.info("=" * 60)
-    logger.info("營養知識 RAG 系統啟動")
+    logger.info("營養知識 RAG 系統啟動（本地開發模式）")
     logger.info(f"Flask 環境: {os.getenv('FLASK_ENV', 'production')}")
     logger.info(f"監聽位址: {os.getenv('FLASK_HOST', '0.0.0.0')}:{os.getenv('FLASK_PORT', '5000')}")
     logger.info("=" * 60)
 
-    # 使用 socketio.run 而不是 app.run
+    # 使用 socketio.run 而不是 app.run（僅限本地開發）
     socketio.run(
         app,
         host=os.getenv('FLASK_HOST', '0.0.0.0'),

@@ -1,0 +1,77 @@
+# ====================================================================
+# .dockerignore - 排除不需要打包到 Docker 映像的文件
+# ====================================================================
+
+# Python 相關
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虛擬環境
+venv/
+env/
+ENV/
+.venv
+
+# IDE 和編輯器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 日誌和臨時文件
+*.log
+logs/
+*.tmp
+*.temp
+
+# 測試文件
+test_*.py
+*_test.py
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# 環境變數（重要！不要將真實的 .env 打包）
+.env
+
+# 文檔
+README.md
+*.md
+DEPLOYMENT_SUMMARY.md
+
+# 截圖和其他
+螢幕擷取畫面*.png
+
+# Chroma 向量資料庫（會在容器內重新建立）
+chroma_db/
