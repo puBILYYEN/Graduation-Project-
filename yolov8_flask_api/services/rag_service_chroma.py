@@ -51,12 +51,15 @@ class RAGServiceChroma:
         try:
             logger.info("正在初始化向量嵌入模型...")
             # 使用輕量級的多語言嵌入模型
+            # 使用與 download_models.py 相同的快取目錄
+            cache_folder = os.getenv('HF_HOME') or os.getenv('SENTENCE_TRANSFORMERS_HOME', '/app/models_cache')
             self.embeddings = HuggingFaceEmbeddings(
                 model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
                 model_kwargs={'device': 'cpu'},
-                encode_kwargs={'normalize_embeddings': True}
+                encode_kwargs={'normalize_embeddings': True},
+                cache_folder=cache_folder
             )
-            logger.info("向量嵌入模型初始化成功")
+            logger.info(f"向量嵌入模型初始化成功 (快取: {cache_folder})")
         except Exception as e:
             logger.log_error_with_trace(e, "初始化嵌入模型")
             self.embeddings = None
