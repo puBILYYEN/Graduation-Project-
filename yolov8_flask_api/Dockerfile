@@ -12,7 +12,9 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    TRANSFORMERS_CACHE=/app/models_cache \
+    SENTENCE_TRANSFORMERS_HOME=/app/models_cache
 
 # 安裝系統依賴（OpenCV 和其他需要的套件）
 RUN apt-get update && apt-get install -y \

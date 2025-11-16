@@ -9,7 +9,10 @@ from sentence_transformers import SentenceTransformer
 def download_embedding_model():
     """下載 HuggingFace 嵌入模型"""
     model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    cache_folder = os.path.expanduser("~/.cache/torch/sentence_transformers")
+    cache_folder = os.getenv('SENTENCE_TRANSFORMERS_HOME', '/app/models_cache')
+
+    # 確保快取目錄存在
+    os.makedirs(cache_folder, exist_ok=True)
 
     print(f"正在下載嵌入模型: {model_name}")
     print(f"快取目錄: {cache_folder}")
