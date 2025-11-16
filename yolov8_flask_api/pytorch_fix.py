@@ -8,16 +8,36 @@ import torch.serialization
 def setup_pytorch_safe_globals():
     """設定 PyTorch 安全全域變數以允許 ultralytics 模型載入"""
     try:
+        # 導入 ultralytics 模型類別
         from ultralytics.nn.tasks import DetectionModel, SegmentationModel, ClassificationModel
+
+        # 導入常用的 PyTorch 模組類別
+        from torch.nn.modules.container import Sequential
+        from torch.nn.modules.linear import Linear
+        from torch.nn.modules.conv import Conv2d
+        from torch.nn.modules.batchnorm import BatchNorm2d
+        from torch.nn.modules.activation import ReLU, SiLU
+
+        # 添加所有必要的安全全域變數
         torch.serialization.add_safe_globals([
+            # Ultralytics 模型
             DetectionModel,
             SegmentationModel,
-            ClassificationModel
+            ClassificationModel,
+            # PyTorch 容器
+            Sequential,
+            # PyTorch 層
+            Linear,
+            Conv2d,
+            BatchNorm2d,
+            # PyTorch 激活函數
+            ReLU,
+            SiLU
         ])
-        print("[PyTorch Fix] 已添加 ultralytics 安全全域變數")
+        print("[PyTorch Fix] 已添加 ultralytics 和 PyTorch 核心類別到安全全域變數")
         return True
     except ImportError as e:
-        print(f"[PyTorch Fix] 無法導入 ultralytics 類別: {e}")
+        print(f"[PyTorch Fix] 無法導入必要類別: {e}")
         print("[PyTorch Fix] 將依賴 ultralytics 內部的 weights_only 處理")
         return False
     except Exception as e:
