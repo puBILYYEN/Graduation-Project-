@@ -55,9 +55,8 @@ class RAGServiceChroma:
             cache_folder = os.getenv('HF_HOME') or os.getenv('SENTENCE_TRANSFORMERS_HOME', '/app/models_cache')
             self.embeddings = HuggingFaceEmbeddings(
                 model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
-                model_kwargs={'device': 'cpu'},
-                encode_kwargs={'normalize_embeddings': True},
-                cache_folder=cache_folder
+                model_kwargs={'device': 'cpu', 'cache_folder': cache_folder},
+                encode_kwargs={'normalize_embeddings': True}
             )
             logger.info(f"向量嵌入模型初始化成功 (快取: {cache_folder})")
         except Exception as e:
