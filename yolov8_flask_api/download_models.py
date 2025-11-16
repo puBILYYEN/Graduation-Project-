@@ -9,7 +9,8 @@ from sentence_transformers import SentenceTransformer
 def download_embedding_model():
     """下載 HuggingFace 嵌入模型"""
     model_name = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-    cache_folder = os.getenv('SENTENCE_TRANSFORMERS_HOME', '/app/models_cache')
+    # 優先使用 HF_HOME (transformers v5 標準)，其次是 SENTENCE_TRANSFORMERS_HOME
+    cache_folder = os.getenv('HF_HOME') or os.getenv('SENTENCE_TRANSFORMERS_HOME', '/app/models_cache')
 
     # 確保快取目錄存在
     os.makedirs(cache_folder, exist_ok=True)
