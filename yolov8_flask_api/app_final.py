@@ -6,6 +6,7 @@
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
+import pytorch_fix  # 修復 PyTorch 2.6+ 權重載入問題
 from ultralytics import YOLO
 from PIL import Image, ImageDraw
 import os

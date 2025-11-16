@@ -29,6 +29,10 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 預先下載機器學習模型（在複製完整應用程式前執行以利用 Docker 快取）
+COPY download_models.py .
+RUN python download_models.py
+
 # 複製應用程式代碼和資源
 COPY . .
 
@@ -44,4 +48,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # 啟動應用程式
 # Cloud Run 會設定 PORT 環境變數，我們需要使用它
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app_final:app
+CMD exec gunicorn --worker-class eventlet -w 1 --bind :$PORT --timeout 0 app_final:app
