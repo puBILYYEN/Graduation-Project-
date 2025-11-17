@@ -235,9 +235,11 @@ class _CameraScreenState extends State<CameraScreen>
           // 相機預覽或錯誤顯示
           if (_viewModel.isInitialized && _viewModel.controller != null)
             Positioned.fill(
-              child: AspectRatio(
-                aspectRatio: _viewModel.controller!.value.aspectRatio,
-                child: CameraPreview(_viewModel.controller!),
+              child: Center(
+                child: AspectRatio(
+                  aspectRatio: _viewModel.controller!.value.aspectRatio,
+                  child: CameraPreview(_viewModel.controller!),
+                ),
               ),
             ),
           if (_hasError)
