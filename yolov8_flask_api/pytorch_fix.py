@@ -15,7 +15,7 @@ def setup_pytorch_safe_globals():
         from ultralytics.nn.modules.conv import Conv, Concat, DWConv, GhostConv, RepConv, ConvTranspose
         
         # 導入所有 ultralytics.nn.modules.block 模組（預防性完整導入）
-        from ultralytics.nn.modules.block import C2f, SPPF, Bottleneck, C3, C1, C2, BottleneckCSP, C3TR, C3Ghost
+        from ultralytics.nn.modules.block import C2f, SPPF, Bottleneck, C3, C1, C2, BottleneckCSP, C3TR, C3Ghost, DFL
         
         # 導入 ultralytics.nn.modules.head 模組
         from ultralytics.nn.modules.head import Detect, Segment, Classify
@@ -37,7 +37,7 @@ def setup_pytorch_safe_globals():
             # Ultralytics Conv 模組（完整）
             Conv, Concat, DWConv, GhostConv, RepConv, ConvTranspose,
             # Ultralytics Block 模組（完整）
-            C2f, SPPF, Bottleneck, C3, C1, C2, BottleneckCSP, C3TR, C3Ghost,
+            C2f, SPPF, Bottleneck, C3, C1, C2, BottleneckCSP, C3TR, C3Ghost, DFL,
             # Ultralytics Head 模組
             Detect, Segment, Classify,
             # PyTorch 容器
