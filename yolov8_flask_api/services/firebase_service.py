@@ -115,6 +115,53 @@ class FirebaseService:
             logger.log_error_with_trace(e, f"取得營養資料 (食物: {food_name})")
             return None
 
+    def get_food_data(self, food_name: str) -> Optional[Dict]:
+        """
+        從 fooddata 集合獲取食物營養資料
+        用於 YOLO 辨識後的營養成分查詢
+        """
+        if not self.is_available():
+            return None
+
+        try:
+            # 從 fooddata 集合查詢
+            query = self.db.collection('fooddata').where('FoodName', '==', food_name).limit(1)
+            results = query.stream()
+
+            for doc in results:
+                data = doc.to_dict()
+                logger.log_firebase_operation("取得食物資料", "成功", f"食物: {food_name}")
+                return data
+
+            # 如果找不到，記錄但不報錯
+            logger.info(f"在 fooddata 中找不到: {food_name}")
+            return None
+        except Exception as e:
+            logger.log_error_with_trace(e, f"取得食物資料 (食物: {food_name})")
+            return None
+
+    def get_multiple_food_data(self, food_names: List[str]) -> Dict[str, Dict]:
+        """
+        批次查詢多個食物的營養資料
+
+        Args:
+            food_names: 食物名稱列表
+
+        Returns:
+            字典，key 為食物名稱，value 為營養資料
+        """
+        if not self.is_available():
+            return {}
+
+        result = {}
+        for food_name in food_names:
+            food_data = self.get_food_data(food_name)
+            if food_data:
+                result[food_name] = food_data
+
+        logger.info(f"批次查詢完成: 查詢 {len(food_names)} 個食物，找到 {len(result)} 個")
+        return result
+
     def get_all_nutrition_data(self) -> List[Dict]:
         """獲取所有營養資料（用於 RAG 向量化）"""
         if not self.is_available():

@@ -197,17 +197,41 @@ def predict():
         # 使用 LLM Manager（支援自動備援和翻譯）
         llm_manager = get_llm_manager()
 
-        # 生成辨識結果說明
-        explain_prompt = f"以下是物件偵測的結果，請用繁體中文簡單解釋：\n{json.dumps(predictions, ensure_ascii=False)}"
-        explain_result = llm_manager.generate_with_translation(
-            explain_prompt,
-            context="食物辨識說明",
-            temperature=0.7,
-            max_tokens=500
-        )
-        gemini_reply = explain_result['text'] if explain_result['text'] else "無法生成說明"
+        # ✅ Phase 1: 從 Firebase fooddata 查詢營養成分
+        nutrition_data_map = {}
+        if firebase_service.is_available():
+            logger.info(f"正在從 Firebase fooddata 查詢 {len(detected_foods)} 個食物的營養資料...")
+            nutrition_data_map = firebase_service.get_multiple_food_data(detected_foods)
+            logger.info(f"✓ 找到 {len(nutrition_data_map)} 個食物的營養資料")
+        else:
+            logger.warning("Firebase 服務不可用，無法查詢營養資料")
 
-        # 生成飲食建議（整合 RAG 系統）
+        # ✅ Phase 2: 生成營養成分分析（顯示在 AI 營養分析）
+        gemini_reply = ""
+        if nutrition_data_map:
+            # 構建營養資訊摘要
+            nutrition_summary = []
+            for food_name, food_data in nutrition_data_map.items():
+                summary = f"\n【{food_name}】\n"
+                if 'WholeFoodCal' in food_data:
+                    summary += f"- 熱量: {food_data['WholeFoodCal']} 大卡\n"
+                if 'WholeFoodProtein' in food_data:
+                    summary += f"- 蛋白質: {food_data['WholeFoodProtein']} 克\n"
+                if 'WholeFoodFat' in food_data:
+                    summary += f"- 脂肪: {food_data['WholeFoodFat']} 克\n"
+                if 'WholeFoodCarbon' in food_data:
+                    summary += f"- 碳水化合物: {food_data['WholeFoodCarbon']} 克\n"
+                nutrition_summary.append(summary)
+
+            # 組合成文字說明
+            gemini_reply = "本餐營養成分分析：\n" + "\n".join(nutrition_summary)
+            logger.info("✓ 營養成分分析生成完成")
+        else:
+            # 如果沒有找到營養資料，使用預設訊息
+            gemini_reply = f"辨識到食物：{', '.join(detected_foods)}\n\n目前無法連接到營養資料庫，請稍後再試。"
+            logger.warning("未找到營養資料，使用預設訊息")
+
+        # ✅ Phase 3: 使用 RAG 生成個性化飲食建議（顯示在飲食建議）
         diet_advice = ""
 
         # 嘗試使用 RAG 生成個性化建議
@@ -222,6 +246,7 @@ def predict():
                 if user_id and firebase_service.is_available():
                     user_profile = firebase_service.get_user_profile(user_id) or {}
                     meal_history = firebase_service.get_user_meal_history(user_id, limit=3) or []
+                    logger.info(f"✓ 已載入使用者資料和歷史記錄")
 
                 # 使用 RAG 生成個性化建議
                 diet_advice = rag_service_chroma.generate_personalized_advice(
@@ -234,20 +259,10 @@ def predict():
                 logger.error(f"RAG 建議生成失敗: {e}")
                 diet_advice = ""
 
-        # 如果 RAG 失敗或不可用，使用 Gemini 備用方案
+        # 如果 RAG 失敗或不可用，使用簡短建議
         if not diet_advice:
-            logger.info("使用 Gemini 生成基礎飲食建議")
-            diet_prompt = f"""以下是使用者拍攝的食物辨識結果：
-{json.dumps(predictions, ensure_ascii=False)}
-
-請用繁體中文給出飲食建議，包括健康搭配、熱量注意與份量建議。"""
-            diet_result = llm_manager.generate_with_translation(
-                diet_prompt,
-                context="飲食建議",
-                temperature=0.7,
-                max_tokens=800
-            )
-            diet_advice = diet_result['text'] if diet_result['text'] else "無法生成建議"
+            logger.info("RAG 不可用，使用基本建議")
+            diet_advice = "請確保飲食均衡，搭配足夠蔬菜和水分。建議諮詢專業營養師以獲得個性化建議。"
 
         response_data = {
             'predictions': predictions,
