@@ -491,9 +491,9 @@ class _CameraScreenState extends State<CameraScreen>
                             ),
                           ),
 
-                          // 智慧拍照按鈕
+                          // 智慧拍照按鈕（食物辨識 + YOLO 分析）
                           GestureDetector(
-                            onTap: () => _viewModel.takeVolumePhoto(context),
+                            onTap: () => _viewModel.takePictureAndNavigate(context),
                             child: Container(
                               width: isTablet ? 100 : 80,
                               height: isTablet ? 100 : 80,
