@@ -15,7 +15,9 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     HF_HOME=/app/models_cache \
     TRANSFORMERS_CACHE=/app/models_cache \
-    SENTENCE_TRANSFORMERS_HOME=/app/models_cache
+    SENTENCE_TRANSFORMERS_HOME=/app/models_cache \
+    TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_OFFLINE=1
 
 # 安裝系統依賴（OpenCV 和其他需要的套件）
 RUN apt-get update && apt-get install -y \
