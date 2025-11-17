@@ -1,26 +1,26 @@
-/// API ç«¯é??ç½®
+/// API ç«¯ï¿½??ï¿½ç½®
 class ApiEndpoints {
-  // Flask API ?ºç? URLï¼ˆé€é? ngrok ??¥?°æœ¬??Flask ?å?ï¼?
-  // ?¬åœ°?‹ç™¼ï¼?http://127.0.0.1:5000'
-  // ngrokï¼?https://nutrition-api-459965557703.asia-east1.run.app'
+  // Flask API ?ï¿½ï¿½? URLï¼ˆé€ï¿½? ngrok ??ï¿½ï¿½?ï¿½æœ¬??Flask ?ï¿½ï¿½?ï¿½?
+  // ?ï¿½åœ°?ï¿½ç™¼ï¿½?http://127.0.0.1:5000'
+  // ngrokï¿½?https://nutrition-api-459965557703.asia-east1.run.app'
   static const String baseUrl = 'https://nutrition-api-459965557703.asia-east1.run.app';
 
-  // è¶…æ??‚é??ç½®
-  static const Duration timeout = Duration(seconds: 30);
+  // è¶…ï¿½??ï¿½ï¿½??ï¿½ç½®
+  static const Duration timeout = Duration(seconds: 120); // å»¶é•·ä»¥æ”¯æ´ YOLO å†·å•Ÿå‹• + æ¨è«– + Gemini
 
-  // AI ?†æ??¸é?ç«¯é?
+  // AI ?ï¿½ï¿½??ï¿½ï¿½?ç«¯ï¿½?
   static const String predict = '/predict';
   static const String health = '/';
 
-  // RAG ç³»çµ±?¸é?ç«¯é?
+  // RAG ç³»çµ±?ï¿½ï¿½?ç«¯ï¿½?
   static const String ragData = '/rag-data';
 
-  /// ?²å?å®Œæ•´??API URL
+  /// ?ï¿½ï¿½?å®Œæ•´??API URL
   static String getFullUrl(String endpoint) {
     return '$baseUrl$endpoint';
   }
 
-  /// ?²å??œæ?æª”æ? URL
+  /// ?ï¿½ï¿½??ï¿½ï¿½?æª”ï¿½? URL
   static String getStaticFileUrl(String filePath) {
     if (filePath.startsWith('/static/')) {
       return '$baseUrl$filePath';
