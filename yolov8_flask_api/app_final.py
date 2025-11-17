@@ -206,33 +206,33 @@ def predict():
         else:
             logger.warning("Firebase 服務不可用，無法查詢營養資料")
 
-        # ✅ Phase 2: 生成營養成分分析（顯示在 AI 營養分析）
-        gemini_reply = ""
+        # ✅ Phase 2: 構建營養資訊摘要（用於 AI 營養分析）
+        nutrition_summary_text = ""
         if nutrition_data_map:
-            # 構建營養資訊摘要
-            nutrition_summary = []
+            nutrition_parts = []
             for food_name, food_data in nutrition_data_map.items():
-                summary = f"\n【{food_name}】\n"
+                summary = f"【{food_name}】\n"
                 if 'WholeFoodCal' in food_data:
-                    summary += f"- 熱量: {food_data['WholeFoodCal']} 大卡\n"
+                    summary += f"  熱量: {food_data['WholeFoodCal']} 大卡\n"
                 if 'WholeFoodProtein' in food_data:
-                    summary += f"- 蛋白質: {food_data['WholeFoodProtein']} 克\n"
+                    summary += f"  蛋白質: {food_data['WholeFoodProtein']} 克\n"
                 if 'WholeFoodFat' in food_data:
-                    summary += f"- 脂肪: {food_data['WholeFoodFat']} 克\n"
+                    summary += f"  脂肪: {food_data['WholeFoodFat']} 克\n"
                 if 'WholeFoodCarbon' in food_data:
-                    summary += f"- 碳水化合物: {food_data['WholeFoodCarbon']} 克\n"
-                nutrition_summary.append(summary)
+                    summary += f"  碳水化合物: {food_data['WholeFoodCarbon']} 克"
+                nutrition_parts.append(summary)
 
-            # 組合成文字說明
-            gemini_reply = "本餐營養成分分析：\n" + "\n".join(nutrition_summary)
-            logger.info("✓ 營養成分分析生成完成")
+            nutrition_summary_text = "\n\n".join(nutrition_parts)
+            logger.info("✓ 營養成分摘要建立完成")
+
+        # 設定 gemini_reply（顯示在 AI 營養分析區塊）
+        if nutrition_summary_text:
+            gemini_reply = f"本餐營養成分分析：\n\n{nutrition_summary_text}"
         else:
-            # 如果沒有找到營養資料，使用預設訊息
             gemini_reply = f"辨識到食物：{', '.join(detected_foods)}\n\n目前無法連接到營養資料庫，請稍後再試。"
-            logger.warning("未找到營養資料，使用預設訊息")
 
         # ✅ Phase 3: 使用 RAG 生成個性化飲食建議（顯示在飲食建議）
-        diet_advice = ""
+        rag_advice = ""
 
         # 嘗試使用 RAG 生成個性化建議
         if rag_service_chroma.is_available():
@@ -249,7 +249,7 @@ def predict():
                     logger.info(f"✓ 已載入使用者資料和歷史記錄")
 
                 # 使用 RAG 生成個性化建議
-                diet_advice = rag_service_chroma.generate_personalized_advice(
+                rag_advice = rag_service_chroma.generate_personalized_advice(
                     detected_foods,
                     user_profile,
                     meal_history
@@ -257,12 +257,24 @@ def predict():
                 logger.info("✓ RAG 個性化建議生成成功")
             except Exception as e:
                 logger.error(f"RAG 建議生成失敗: {e}")
-                diet_advice = ""
+                rag_advice = ""
 
-        # 如果 RAG 失敗或不可用，使用簡短建議
-        if not diet_advice:
-            logger.info("RAG 不可用，使用基本建議")
-            diet_advice = "請確保飲食均衡，搭配足夠蔬菜和水分。建議諮詢專業營養師以獲得個性化建議。"
+        # ✅ Phase 4: 組合「飲食建議」= 營養資訊 + RAG 建議
+        diet_advice_parts = []
+
+        # 加入營養資訊
+        if nutrition_summary_text:
+            diet_advice_parts.append(f"📊 營養成分：\n\n{nutrition_summary_text}")
+
+        # 加入 RAG 個性化建議
+        if rag_advice:
+            diet_advice_parts.append(f"💡 個性化建議：\n\n{rag_advice}")
+        else:
+            diet_advice_parts.append("💡 個性化建議：\n\n請確保飲食均衡，搭配足夠蔬菜和水分。建議諮詢專業營養師以獲得個性化建議。")
+
+        # 組合最終的飲食建議
+        diet_advice = "\n\n".join(diet_advice_parts)
+        logger.info("✓ 飲食建議組合完成")
 
         response_data = {
             'predictions': predictions,
