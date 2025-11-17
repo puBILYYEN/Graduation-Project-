@@ -232,12 +232,14 @@ class _CameraScreenState extends State<CameraScreen>
       backgroundColor: Colors.black, // 設定背景色為黑色
       body: Stack(
         children: [
-          // 相機預覽或錯誤顯示
+          // 相機預覽或錯誤顯示（響應式全螢幕）
           if (_viewModel.isInitialized && _viewModel.controller != null)
             Positioned.fill(
-              child: Center(
-                child: AspectRatio(
-                  aspectRatio: _viewModel.controller!.value.aspectRatio,
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _viewModel.controller!.value.previewSize!.height,
+                  height: _viewModel.controller!.value.previewSize!.width,
                   child: CameraPreview(_viewModel.controller!),
                 ),
               ),
