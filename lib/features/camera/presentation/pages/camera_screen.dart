@@ -382,6 +382,43 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
+          // 方向指示箭頭 (已隱藏，避免遮擋關閉按鈕)
+          if (!_viewModel.isDeviceLandscape)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 20,
+              left: 20,
+              child: Opacity(
+                opacity: 0.0, // 完全透明，不可見
+                child: IgnorePointer( // 忽略觸摸事件
+                  child: Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.keyboard_arrow_up,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          '朝上',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
 
           // 底部控制區域
           Positioned(
