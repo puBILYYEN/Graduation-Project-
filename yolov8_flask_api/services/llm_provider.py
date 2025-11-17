@@ -70,12 +70,11 @@ class GeminiProvider(BaseLLMProvider):
             genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel(self.model_name)
 
-            # 測試連接
-            test_response = self.model.generate_content("test")
-            if test_response:
-                self.is_available = True
-                logger.info(f"✅ Gemini API ({self.model_name}) 初始化成功")
-                return True
+            # 不進行測試連接 - 避免 Cloud Run 冷啟動超時
+            # 只要 API key 設置且模型創建成功即可
+            self.is_available = True
+            logger.info(f"✅ Gemini API ({self.model_name}) 初始化成功 (跳過測試連接)")
+            return True
 
         except Exception as e:
             self._last_error = str(e)
