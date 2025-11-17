@@ -19,8 +19,8 @@ def download_embedding_model():
     print(f"快取目錄: {cache_folder}")
 
     try:
-        # 下載模型到預設快取目錄
-        model = SentenceTransformer(model_name)
+        # 下載模型到指定快取目錄 (明確指定 cache_folder)
+        model = SentenceTransformer(model_name, cache_folder=cache_folder)
         print(f"✓ 模型下載成功")
         print(f"模型維度: {model.get_sentence_embedding_dimension()}")
 
