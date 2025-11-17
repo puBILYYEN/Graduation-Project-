@@ -12,7 +12,7 @@ def setup_pytorch_safe_globals():
         from ultralytics.nn.tasks import DetectionModel, SegmentationModel, ClassificationModel
 
         # 導入 ultralytics 模組 - 這是錯誤訊息中缺少的關鍵部分
-        from ultralytics.nn.modules.conv import Conv
+        from ultralytics.nn.modules.conv import Conv, Concat
         from ultralytics.nn.modules.block import C2f, SPPF, Bottleneck
 
         # 導入常用的 PyTorch 模組類別（包含容器類別 - ModuleList 修復）
@@ -31,8 +31,9 @@ def setup_pytorch_safe_globals():
             DetectionModel,
             SegmentationModel,
             ClassificationModel,
-            # Ultralytics 模組（關鍵修復 - 包含 Conv）
+            # Ultralytics 模組（關鍵修復 - 包含 Conv, Concat）
             Conv,
+            Concat,
             C2f,
             SPPF,
             Bottleneck,
@@ -51,7 +52,7 @@ def setup_pytorch_safe_globals():
             ReLU,
             SiLU
         ])
-        print('[PyTorch Fix] 已添加 ultralytics 模組、PyTorch 容器（ModuleList, ModuleDict）和核心類別到安全全域變數')
+        print('[PyTorch Fix] 已添加 ultralytics 模組（Conv, Concat）、PyTorch 容器（ModuleList, ModuleDict）和核心類別到安全全域變數')
         return True
     except ImportError as e:
         print(f'[PyTorch Fix] 無法導入必要類別: {e}')
