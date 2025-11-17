@@ -1,7 +1,8 @@
-"""
-RAG (Retrieval-Augmented Generation) 服務模組
-整合 Langchain + FAISS + LLM Manager (支援多 LLM 提供者)
-"""
+# ==========================================================================
+# @檔案: rag_service.py
+# @描述: RAG (Retrieval-Augmented Generation) 服務模組。
+#        封裝了向量資料庫的建立、查詢以及與大型語言模型(LLM)的互動。
+# ==========================================================================
 import os
 import json
 from typing import List, Dict, Optional
@@ -13,35 +14,48 @@ from langchain.docstore.document import Document
 from services.llm_provider import get_llm_manager
 from utils.logger import logger
 
+# --------------------------------------------------------------------
+# @類別: RAGService
+# @描述: RAG 服務管理器，採用單例模式 (Singleton Pattern) 以確保
+#        整個應用程式中只有一個實例，避免重複載入模型和資料庫。
+# --------------------------------------------------------------------
 class RAGService:
     """RAG 服務管理器"""
 
     _instance = None
 
+    # 實作單例模式
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(RAGService, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
+    # 初始化服務
     def __init__(self):
         if self._initialized:
             return
 
         self._initialized = True
-        self.vector_store = None
-        self.embeddings = None
-        # self.gemini_api_key = os.getenv('GEMINI_API_KEY')  # 已註解：改用 LLM Manager
-        self.llm_manager = get_llm_manager()
+        
+        self.vector_store = None # 將用於儲存 FAISS 向量資料庫
+        self.embeddings = None   # 將用於儲存 HuggingFace 嵌入模型
+        self.llm_manager = get_llm_manager() # 獲取 LLM 管理器實例
 
         self._initialize_embeddings()
         # self._initialize_gemini()  # 已註解：改用 LLM Manager
 
+    # ------------------------------------------------------------------
+    # @方法: _initialize_embeddings (私有)
+    # @描述: 初始化將文字轉換為向量的嵌入模型。
+    # ------------------------------------------------------------------
     def _initialize_embeddings(self):
         """初始化嵌入模型"""
         try:
             logger.info("正在初始化向量嵌入模型...")
-            # 使用輕量級的中文嵌入模型
+            # 使用一個輕量級、支援多語言的句子轉換模型。
+            # 'cpu' 強制在 CPU 上運行，避免在沒有 GPU 的環境中出錯。
+            # 'normalize_embeddings': True 將向量長度標準化，有助於相似度計算。
             self.embeddings = HuggingFaceEmbeddings(
                 model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
                 model_kwargs={'device': 'cpu'},
@@ -63,10 +77,18 @@ class RAGService:
     #     except Exception as e:
     #         logger.log_error_with_trace(e, "初始化 Gemini API")
 
+    # ------------------------------------------------------------------
+    # @方法: is_available
+    # @描述: 檢查 RAG 服務是否所有元件都已準備就緒。
+    # ------------------------------------------------------------------
     def is_available(self) -> bool:
         """檢查 RAG 服務是否可用"""
         return self.embeddings is not None and self.llm_manager.current_provider is not None
 
+    # ------------------------------------------------------------------
+    # @方法: build_vector_store
+    # @描述: 根據提供的營養資料，建立一個 FAISS 向量資料庫並儲存到本地。
+    # ------------------------------------------------------------------
     def build_vector_store(self, nutrition_data: List[Dict], custom_data: Optional[List[Dict]] = None):
         """
         建立向量資料庫
@@ -82,23 +104,19 @@ class RAGService:
         try:
             logger.info("正在建立向量資料庫...")
 
-            # 準備文檔
+            # 步驟 1: 將從 Firebase 或其他來源獲取的結構化資料 (Dict) 轉換為 Langchain 的 Document 物件。
             documents = []
-
-            # 處理 Firebase 營養資料
             for item in nutrition_data:
                 content = self._format_nutrition_document(item)
                 doc = Document(page_content=content, metadata=item)
                 documents.append(doc)
-
-            # 處理自訂資料
             if custom_data:
                 for item in custom_data:
                     content = self._format_nutrition_document(item)
                     doc = Document(page_content=content, metadata=item)
                     documents.append(doc)
 
-            # 文本分割（如果文檔太長）
+            # 步驟 2: 對於較長的文檔，進行切割，以符合嵌入模型的輸入長度限制。
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=500,
                 chunk_overlap=50,
@@ -106,10 +124,10 @@ class RAGService:
             )
             split_docs = text_splitter.split_documents(documents)
 
-            # 建立 FAISS 向量存儲
+            # 步驟 3: 使用 FAISS (Facebook AI Similarity Search) 從切割後的文檔和嵌入模型建立向量索引。
             self.vector_store = FAISS.from_documents(split_docs, self.embeddings)
 
-            # 保存向量存儲到本地
+            # 步驟 4: 將建立好的索引儲存到本地磁碟，以便下次啟動時能快速載入。
             self.vector_store.save_local("faiss_index")
 
             logger.info(f"向量資料庫建立成功，共 {len(split_docs)} 個文檔片段")
@@ -119,6 +137,10 @@ class RAGService:
             logger.log_error_with_trace(e, "建立向量資料庫")
             return False
 
+    # ------------------------------------------------------------------
+    # @方法: load_vector_store
+    # @描述: 從本地磁碟載入先前已建立的 FAISS 向量資料庫。
+    # ------------------------------------------------------------------
     def load_vector_store(self) -> bool:
         """從本地載入向量資料庫"""
         try:
@@ -126,7 +148,7 @@ class RAGService:
                 self.vector_store = FAISS.load_local(
                     "faiss_index",
                     self.embeddings,
-                    allow_dangerous_deserialization=True
+                    allow_dangerous_deserialization=True # FAISS 載入 pickle 檔案需要此參數
                 )
                 logger.info("向量資料庫載入成功")
                 return True
@@ -137,6 +159,10 @@ class RAGService:
             logger.log_error_with_trace(e, "載入向量資料庫")
             return False
 
+    # ------------------------------------------------------------------
+    # @方法: _format_nutrition_document (私有)
+    # @描述: 將一個營養資料的 Dictionary 格式化為一段易於閱讀和嵌入的純文字。
+    # ------------------------------------------------------------------
     def _format_nutrition_document(self, nutrition_data: Dict) -> str:
         """格式化營養資料為文檔內容"""
         parts = []
@@ -171,6 +197,11 @@ class RAGService:
 
         return "\n".join(parts)
 
+    # ------------------------------------------------------------------
+    # @方法: query_nutrition (RAG 中的 "Retrieval" 環節)
+    # @描述: 接收一個文字查詢，在向量資料庫中進行相似度搜尋，找出最相關的營養資料。
+    # @返回: List[Dict] - 包含最相關文件元數據 (metadata) 的列表。
+    # ------------------------------------------------------------------
     def query_nutrition(self, query: str, k: int = 5) -> List[Dict]:
         """
         查詢相關的營養資料
@@ -187,9 +218,10 @@ class RAGService:
             return []
 
         try:
-            # 相似度搜尋
+            # 核心步驟：使用向量資料庫的 similarity_search 方法來尋找最相似的 k 個文檔。
             docs = self.vector_store.similarity_search(query, k=k)
 
+            # 從返回的 Document 物件中僅提取我們需要的元數據 (原始的營養資料)。
             results = []
             for doc in docs:
                 results.append(doc.metadata)
@@ -201,6 +233,11 @@ class RAGService:
             logger.log_error_with_trace(e, f"查詢營養資料 (query: {query})")
             return []
 
+    # ------------------------------------------------------------------
+    # @方法: generate_personalized_advice (RAG 中的 "Generation" 環節)
+    # @描述: 結合辨識的食物、使用者資料和從向量資料庫檢索到的知識，
+    #        建構一個詳細的提示(Prompt)，並交給 LLM 生成個人化建議。
+    # ------------------------------------------------------------------
     def generate_personalized_advice(
         self,
         detected_foods: List[str],
@@ -222,13 +259,13 @@ class RAGService:
             return "LLM 服務未配置或不可用，無法生成建議"
 
         try:
-            # 查詢相關營養資料
+            # 步驟 1 (Retrieval): 為每種辨識出的食物，查詢相關的營養知識。
             nutrition_context = []
             for food in detected_foods:
                 relevant_data = self.query_nutrition(food, k=2)
                 nutrition_context.extend(relevant_data)
 
-            # 構建提示詞
+            # 步驟 2 (Prompt Engineering): 建構一個結構化的、資訊豐富的提示詞。
             prompt = self._build_advice_prompt(
                 detected_foods,
                 nutrition_context,
@@ -236,7 +273,7 @@ class RAGService:
                 meal_history
             )
 
-            # 使用 LLM Manager 生成內容（自動切換機制）
+            # 步驟 3 (Generation): 使用 LLM Manager (會自動選擇可用的 LLM 服務) 來生成最終的回答。
             advice = self.llm_manager.generate_content(
                 prompt,
                 temperature=0.7,
@@ -255,6 +292,11 @@ class RAGService:
             logger.log_error_with_trace(e, "生成個性化建議")
             return f"生成建議時發生錯誤：{str(e)}"
 
+    # ------------------------------------------------------------------
+    # @方法: _build_advice_prompt (私有)
+    # @描述: 提示詞工程 (Prompt Engineering) 的核心，負責將所有上下文資訊
+    #        組合成一個高品質的、結構化的提示詞，以引導 LLM 產生期望的輸出。
+    # ------------------------------------------------------------------
     def _build_advice_prompt(
         self,
         detected_foods: List[str],
@@ -312,5 +354,6 @@ class RAGService:
 
         return "\n".join(prompt_parts)
 
-# 全域 RAG 服務實例
+# --- 區塊: 全域實例 ---
+# 建立 RAGService 的單例，讓應用程式的其他部分可以直接導入和使用。
 rag_service = RAGService()

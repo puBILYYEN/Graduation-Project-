@@ -154,6 +154,22 @@
       _socket!.emit('nutrition_data', nutritionData);
     }
 
+    /// 發送身體數據更新給 RAG 系統
+    /// 當使用者的身體數據（身高、體重、睡眠等）更新時，通知 RAG 系統以優化建議
+    void sendBodyDataUpdate(Map<String, dynamic> bodyData) {
+      if (!isConnected) {
+        print('Socket.IO 未連接，無法發送身體數據');
+        return;
+      }
+
+      print('發送身體數據更新給 RAG: $bodyData');
+      _socket!.emit('body_data_update', {
+        'bodyData': bodyData,
+        'timestamp': DateTime.now().toIso8601String(),
+        'source': 'flutter_app',
+      });
+    }
+
     /// 斷開連接
     void disconnect() {
       if (_socket?.connected == true) {

@@ -1974,38 +1974,38 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // 方向指示箭頭 (豎螢幕且長邊朝上時顯示)
-          if (!_isDeviceLandscape && _isDevicePortraitUp)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 20,
-              left: 20,
-              child: Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.keyboard_arrow_up,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '朝上',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // 方向指示箭頭 (已移除，避免擋到關閉按鈕)
+          // if (!_isDeviceLandscape && _isDevicePortraitUp)
+          //   Positioned(
+          //     top: MediaQuery.of(context).padding.top + 20,
+          //     left: 20,
+          //     child: Container(
+          //       padding: EdgeInsets.all(12),
+          //       decoration: BoxDecoration(
+          //         color: Colors.black.withOpacity(0.7),
+          //         borderRadius: BorderRadius.circular(20),
+          //       ),
+          //       child: Column(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: [
+          //           Icon(
+          //             Icons.keyboard_arrow_up,
+          //             color: Colors.white,
+          //             size: 24,
+          //           ),
+          //           SizedBox(height: 4),
+          //           Text(
+          //             '朝上',
+          //             style: TextStyle(
+          //               color: Colors.white,
+          //               fontSize: 12,
+          //               fontWeight: FontWeight.w500,
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
 
           // 底部控制區域
           Positioned(

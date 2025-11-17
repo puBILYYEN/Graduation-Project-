@@ -13,7 +13,7 @@ with open('classes.txt', 'r', encoding='utf-8') as f:
     class_names = [line.strip() for line in f.readlines()]
 
 # 載入 YOLO 模型
-model = YOLO('初試v2.pt')
+model = YOLO('a11171200.pt')
 
 # Gemini API 設定
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"

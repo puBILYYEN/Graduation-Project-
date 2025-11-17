@@ -1,6 +1,7 @@
-// ====================================================================
-// 主應用程式入口點 - Clean Architecture 版本
-// ====================================================================
+/// ==========================================================================
+/// @檔案: main.dart
+/// @描述: 應用程式主入口點，負責初始化、設定依賴注入(DI)和啟動應用。
+/// ==========================================================================
 import 'dart:io';  // 用於 HttpOverrides
 
 import 'package:flutter/material.dart';
@@ -70,50 +71,58 @@ import 'features/exercise/presentation/viewmodels/exercise_viewmodel.dart';
 import 'firebase_options.dart';
 import 'core/services/app_logger.dart';
 
-// ====================================================================
-// HttpOverrides 類別 - 處理 HTTPS 證書問題（用於開發環境）
-// ====================================================================
+/// --------------------------------------------------------------------
+/// @類別: MyHttpOverrides
+/// @描述: 處理 HTTPS 證書驗證問題的自訂類別。
+///        主要用於開發環境，以允許不受信任的證書(例如 ngrok)。
+/// --------------------------------------------------------------------
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
       ..badCertificateCallback = (X509Certificate cert, String host, int port) {
-        // 在開發環境中允許所有證書（包括 ngrok 的證書）
-        // 生產環境應該移除此代碼或只允許特定的 host
+        // 開發模式下，總是返回 true，表示接受任何（包括自簽名的）證書。
+        // 警告：這在生產環境中是不安全的，應移除或限制在特定 host。
         return true;
       };
   }
 }
 
-// ====================================================================
-// 主函數 - 應用程式入口點
-// ====================================================================
+/// --------------------------------------------------------------------
+/// @函數: main
+/// @描述: Flutter 應用程式的入口函數，程式從這裡開始執行。
+/// --------------------------------------------------------------------
 Future<void> main() async {
-  // 確保Flutter綁定初始化完成
+  // 步驟 1: 確保 Flutter 引擎的綁定已經初始化。
+  // 這是呼叫原生程式碼前必須執行的第一步。
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 設置 HttpOverrides 以處理 HTTPS 證書問題（開發環境）
+  // 步驟 2: 設定 HttpOverrides (僅限非 Web 平台)。
+  // 這允許在開發時信任自簽名的 HTTPS 證書，例如 ngrok。
   if (!kIsWeb) {
     HttpOverrides.global = MyHttpOverrides();
   }
 
-  // 初始化日誌系統
+  // 步驟 3: 初始化自訂的日誌系統。
   await AppLogger.initialize();
-  // 設定系統UI風格（這個可以同步執行）
+
+  // 步驟 4: 設定系統頂部狀態欄的 UI 風格。
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
+      statusBarColor: Colors.transparent, // 狀態欄背景透明
+      statusBarIconBrightness: Brightness.dark, // 狀態欄圖示為深色
     ),
   );
 
-  // 先啟動應用程式，背景初始化服務
+  // 步驟 5: 啟動 Flutter 應用程式的根組件 (Root Widget)。
   runApp(const MyApp());
 }
 
-// ====================================================================
-// 主應用程式類別 - 使用 StatefulWidget + FutureBuilder 支援熱重載
-// ====================================================================
+/// --------------------------------------------------------------------
+/// @類別: MyApp
+/// @描述: 應用程式的根組件 (Root Widget)，使用 StatefulWidget 以便
+///        在 initState 中執行非同步的服務初始化。
+/// --------------------------------------------------------------------
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
@@ -122,55 +131,53 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  /// [_initializationFuture]: 用於儲存服務初始化過程的 Future。
+  /// 將其定義為一個屬性，可以防止在每次 build 時重複執行初始化。
   late final Future<CameraService?> _initializationFuture;
 
   @override
   void initState() {
     super.initState();
-    // 在 initState 中初始化 Future，確保只執行一次
+    // 在 initState 中僅執行一次初始化函數，並將返回的 Future 賦值給屬性。
     _initializationFuture = _initializeServices();
   }
 
-  /// 初始化服務並返回 CameraService（如果需要）
-  /// 使用 Future 而非直接在 initState 中執行，確保 FutureBuilder 能正確追蹤狀態
+  /// ------------------------------------------------------------------
+  /// @方法: _initializeServices
+  /// @描述: 執行所有必要的非同步服務初始化，例如 Firebase。
+  ///        此方法被設計為在 FutureBuilder 中呼叫，並處理初始化過程中的錯誤。
+  /// @返回: Future<CameraService?> - 返回一個可選的 CameraService 實例。
+  /// ------------------------------------------------------------------
   Future<CameraService?> _initializeServices() async {
     try {
       debugPrint('🚀 開始初始化服務...');
 
-      // 初始化 Firebase（檢查是否已初始化，避免重複）
+      // 初始化 Firebase。使用 try-catch 來處理可能已經初始化過的 "duplicate-app" 情況。
       try {
         await Firebase.initializeApp(
           options: DefaultFirebaseOptions.currentPlatform,
         );
         debugPrint('✅ Firebase 初始化成功');
       } catch (e) {
-        // Firebase 可能已經初始化，這不是錯誤
+        // 如果 Firebase 實例已存在，這不是一個致命錯誤，僅記錄資訊。
         if (e.toString().contains('duplicate-app')) {
           debugPrint('ℹ️ Firebase 已經初始化，跳過');
         } else {
+          // 對於其他 Firebase 初始化錯誤，則記錄警告。
           debugPrint('⚠️ Firebase 初始化警告: $e');
         }
       }
 
-      // 註解：暫時停用相機服務初始化，避免與 camera_screen_full.dart 資源衝突
-      // 只在非 Web 平台初始化相機服務
-      // if (!kIsWeb) {
-      //   final cameraService = CameraService();
-      //   await cameraService.initializeCameras();
-      //   debugPrint('✅ 相機服務初始化成功');
-      //   return cameraService;
-      // } else {
-      //   debugPrint('ℹ️ Web 平台：跳過相機初始化');
-      //   return null;
-      // }
-
-      // 相機初始化移至 camera_screen_full.dart 內部處理
+      // 全局相機初始化邏輯已被移至相機頁面內部處理，以避免資源衝突和優化啟動。
+      // 因此，這裡僅打印一條資訊，並返回 null。
       debugPrint('ℹ️ 跳過全局相機初始化（由相機頁面獨立管理）');
       return null;
+
     } catch (e, stackTrace) {
+      // 如果在初始化過程中發生任何其他未捕獲的錯誤，記錄下來。
       debugPrint('❌ 服務初始化失敗: $e');
       debugPrint('❌ StackTrace: $stackTrace');
-      // 即使初始化失敗，也返回 null 讓應用程式能夠啟動
+      // 即使初始化失敗，也返回 null，讓應用程式能夠啟動並可能顯示一個錯誤頁面。
       return null;
     }
   }
@@ -179,12 +186,14 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     debugPrint('🔄 MyApp.build 被調用');
 
+    // 使用 FutureBuilder 來監聽初始化過程，並根據狀態顯示不同的 UI。
     return FutureBuilder<CameraService?>(
-      future: _initializationFuture,  // 使用緩存的 Future
+      future: _initializationFuture,  // 監聽在 initState 中創建的 Future
       builder: (context, snapshot) {
         debugPrint('📊 FutureBuilder 狀態: ${snapshot.connectionState}');
 
-        // 初始化中：顯示簡單的載入畫面
+        // 案例 1: 初始化正在進行中 (Future 尚未完成)。
+        // 顯示一個簡單的載入畫面，提供友好的用戶體驗。
         if (snapshot.connectionState != ConnectionState.done) {
           debugPrint('⏳ 顯示初始化畫面');
           return MaterialApp(
@@ -205,167 +214,171 @@ class _MyAppState extends State<MyApp> {
           );
         }
 
-        // 初始化完成：建構完整的應用程式
+        // 案例 2: 初始化完成 (Future 已完成)。
         debugPrint('✅ 初始化完成，建構 MultiProvider');
-        final cameraService = snapshot.data;
+        final cameraService = snapshot.data; // 獲取初始化結果 (在此案例中為 null)
 
+        // 使用 MultiProvider 來進行全域的依賴注入 (Dependency Injection)。
+        // 所有在這裡提供的服務、倉儲、用例和視圖模型都可以在其子組件中被存取。
         return MultiProvider(
-      providers: [
-        // =======================================
-        // Core Services
-        // =======================================
-        // 註解：暫時停用 CameraService Provider（相機由 camera_screen_full.dart 獨立管理）
-        // 只在非 Web 平台提供 CameraService
-        // if (cameraService != null)
-        //   Provider<CameraService>.value(value: cameraService),
-        Provider<FirestoreService>(create: (_) => FirestoreService()),
+          providers: [
+            // =======================================
+            // 核心服務 (Services)
+            // =======================================
+            Provider<FirestoreService>(create: (_) => FirestoreService()),
 
-        // =======================================
-        // Datasources
-        // =======================================
-        Provider<FirebaseAuthDatasource>(create: (_) => FirebaseAuthDatasource()),
-        Provider<CameraDatasource>(create: (_) => CameraDatasource()),
-        Provider<ImageProcessingDatasource>(create: (_) => ImageProcessingDatasource()),
+            // =======================================
+            // 資料來源 (Datasources) - 資料層的最底層，直接與外部(如Firebase)互動
+            // =======================================
+            Provider<FirebaseAuthDatasource>(create: (_) => FirebaseAuthDatasource()),
+            Provider<CameraDatasource>(create: (_) => CameraDatasource()),
+            Provider<ImageProcessingDatasource>(create: (_) => ImageProcessingDatasource()),
 
-        // =======================================
-        // Repositories
-        // =======================================
-        Provider<AuthRepository>(
-          create: (context) => AuthRepositoryImpl(context.read<FirebaseAuthDatasource>()),
-        ),
-        Provider<FoodDiaryRepository>(
-          create: (_) => MockFoodDiaryRepositoryImpl(),
-        ),
-        Provider<AnalysisRepository>(
-          create: (_) => MockAnalysisRepositoryImpl(),
-        ),
-        Provider<CameraRepository>(
-          create: (context) => CameraRepositoryImpl(
-            context.read<CameraDatasource>(),
-            context.read<ImageProcessingDatasource>(),
-          ),
-        ),
-        Provider<StatisticsRepository>(
-          create: (context) => StatisticsRepositoryImpl(
-            foodDiaryRepository: context.read<FoodDiaryRepository>(),
-            analysisRepository: context.read<AnalysisRepository>(),
-          ),
-        ),
-        Provider<ExerciseRepository>(
-          create: (_) => FirebaseExerciseRepository(),
-        ),
+            // =======================================
+            // 資料倉儲 (Repositories) - 實作 Domain 層的抽象介面，連接 Datasources
+            // =======================================
+            Provider<AuthRepository>(
+              create: (context) => AuthRepositoryImpl(context.read<FirebaseAuthDatasource>()),
+            ),
+            Provider<FoodDiaryRepository>(
+              create: (_) => MockFoodDiaryRepositoryImpl(), // 注意：這裡是使用 Mock 實作
+            ),
+            Provider<AnalysisRepository>(
+              create: (_) => MockAnalysisRepositoryImpl(), // 注意：這裡是使用 Mock 實作
+            ),
+            Provider<CameraRepository>(
+              create: (context) => CameraRepositoryImpl(
+                context.read<CameraDatasource>(),
+                context.read<ImageProcessingDatasource>(),
+              ),
+            ),
+            Provider<StatisticsRepository>(
+              create: (context) => StatisticsRepositoryImpl(
+                foodDiaryRepository: context.read<FoodDiaryRepository>(),
+                analysisRepository: context.read<AnalysisRepository>(),
+              ),
+            ),
+            Provider<ExerciseRepository>(
+              create: (_) => FirebaseExerciseRepository(),
+            ),
 
-        // =======================================
-        // UseCases
-        // =======================================
-        // Food Diary
-        Provider<GetFoodEntriesUseCase>(
-          create: (context) => GetFoodEntriesUseCase(context.read<FoodDiaryRepository>()),
-        ),
-        Provider<AddFoodEntryUseCase>(
-          create: (context) => AddFoodEntryUseCase(context.read<FoodDiaryRepository>()),
-        ),
-        // Analysis
-        Provider<GetBodyMetricsUseCase>(
-          create: (context) => GetBodyMetricsUseCase(context.read<AnalysisRepository>()),
-        ),
-        Provider<UpdateBodyMetricsUseCase>(
-          create: (context) => UpdateBodyMetricsUseCase(context.read<AnalysisRepository>()),
-        ),
-        // Camera
-        Provider<GetAvailableCamerasUseCase>(
-          create: (context) => GetAvailableCamerasUseCase(context.read<CameraRepository>()),
-        ),
-        Provider<InitializeCameraUseCase>(
-          create: (context) => InitializeCameraUseCase(context.read<CameraRepository>()),
-        ),
-        Provider<TakePictureUseCase>(
-          create: (context) => TakePictureUseCase(context.read<CameraRepository>()),
-        ),
-        Provider<ToggleFlashUseCase>(
-          create: (context) => ToggleFlashUseCase(context.read<CameraRepository>()),
-        ),
-        Provider<SwitchCameraUseCase>(
-          create: (context) => SwitchCameraUseCase(context.read<CameraRepository>()),
-        ),
-        Provider<PickImagesFromGalleryUseCase>(
-          create: (context) => PickImagesFromGalleryUseCase(context.read<CameraRepository>()),
-        ),
-        Provider<AnalyzeImageUseCase>(
-          create: (context) => AnalyzeImageUseCase(context.read<CameraRepository>()),
-        ),
-        Provider<PerformVolumeCalculationUseCase>(
-          create: (context) => PerformVolumeCalculationUseCase(context.read<CameraRepository>()),
-        ),
-        // Statistics
-        Provider<GetDailyNutritionUseCase>(
-          create: (context) => GetDailyNutritionUseCase(context.read<StatisticsRepository>()),
-        ),
-        Provider<GetWeeklyNutritionUseCase>(
-          create: (context) => GetWeeklyNutritionUseCase(context.read<StatisticsRepository>()),
-        ),
-        Provider<GetWeightHistoryUseCase>(
-          create: (context) => GetWeightHistoryUseCase(context.read<StatisticsRepository>()),
-        ),
-        Provider<GetMealDistributionUseCase>(
-          create: (context) => GetMealDistributionUseCase(context.read<StatisticsRepository>()),
-        ),
+            // =======================================
+            // 用例 (UseCases) - 封裝單一的業務邏輯，由 ViewModel 呼叫
+            // =======================================
+            // Food Diary
+            Provider<GetFoodEntriesUseCase>(
+              create: (context) => GetFoodEntriesUseCase(context.read<FoodDiaryRepository>()),
+            ),
+            Provider<AddFoodEntryUseCase>(
+              create: (context) => AddFoodEntryUseCase(context.read<FoodDiaryRepository>()),
+            ),
+            // Analysis
+            Provider<GetBodyMetricsUseCase>(
+              create: (context) => GetBodyMetricsUseCase(context.read<AnalysisRepository>()),
+            ),
+            Provider<UpdateBodyMetricsUseCase>(
+              create: (context) => UpdateBodyMetricsUseCase(context.read<AnalysisRepository>()),
+            ),
+            // Camera
+            Provider<GetAvailableCamerasUseCase>(
+              create: (context) => GetAvailableCamerasUseCase(context.read<CameraRepository>()),
+            ),
+            Provider<InitializeCameraUseCase>(
+              create: (context) => InitializeCameraUseCase(context.read<CameraRepository>()),
+            ),
+            Provider<TakePictureUseCase>(
+              create: (context) => TakePictureUseCase(context.read<CameraRepository>()),
+            ),
+            Provider<ToggleFlashUseCase>(
+              create: (context) => ToggleFlashUseCase(context.read<CameraRepository>()),
+            ),
+            Provider<SwitchCameraUseCase>(
+              create: (context) => SwitchCameraUseCase(context.read<CameraRepository>()),
+            ),
+            Provider<PickImagesFromGalleryUseCase>(
+              create: (context) => PickImagesFromGalleryUseCase(context.read<CameraRepository>()),
+            ),
+            Provider<AnalyzeImageUseCase>(
+              create: (context) => AnalyzeImageUseCase(context.read<CameraRepository>()),
+            ),
+            Provider<PerformVolumeCalculationUseCase>(
+              create: (context) => PerformVolumeCalculationUseCase(context.read<CameraRepository>()),
+            ),
+            // Statistics
+            Provider<GetDailyNutritionUseCase>(
+              create: (context) => GetDailyNutritionUseCase(context.read<StatisticsRepository>()),
+            ),
+            Provider<GetWeeklyNutritionUseCase>(
+              create: (context) => GetWeeklyNutritionUseCase(context.read<StatisticsRepository>()),
+            ),
+            Provider<GetWeightHistoryUseCase>(
+              create: (context) => GetWeightHistoryUseCase(context.read<StatisticsRepository>()),
+            ),
+            Provider<GetMealDistributionUseCase>(
+              create: (context) => GetMealDistributionUseCase(context.read<StatisticsRepository>()),
+            ),
 
-        // =======================================
-        // ViewModels
-        // =======================================
-        ChangeNotifierProvider<FoodDiaryViewModel>(
-          create: (context) => FoodDiaryViewModel(
-            context.read<GetFoodEntriesUseCase>(),
-            context.read<AddFoodEntryUseCase>(),
+            // =======================================
+            // 視圖模型 (ViewModels) - 處理 UI 狀態和業務邏輯，讓 Widget 保持乾淨
+            // =======================================
+            ChangeNotifierProvider<FoodDiaryViewModel>(
+              create: (context) => FoodDiaryViewModel(
+                context.read<GetFoodEntriesUseCase>(),
+                context.read<AddFoodEntryUseCase>(),
+              ),
+            ),
+            ChangeNotifierProvider<BodyAnalysisViewModel>(
+              create: (context) => BodyAnalysisViewModel(
+                context.read<GetBodyMetricsUseCase>(),
+                context.read<UpdateBodyMetricsUseCase>(),
+              ),
+            ),
+            ChangeNotifierProvider<StatisticsViewModel>(
+              create: (context) => StatisticsViewModel(
+                getDailyNutritionUseCase: context.read<GetDailyNutritionUseCase>(),
+                getWeeklyNutritionUseCase: context.read<GetWeeklyNutritionUseCase>(),
+                getWeightHistoryUseCase: context.read<GetWeightHistoryUseCase>(),
+                getMealDistributionUseCase: context.read<GetMealDistributionUseCase>(),
+              ),
+            ),
+            ChangeNotifierProvider<ExerciseViewModel>(
+              create: (context) => ExerciseViewModel(
+                context.read<ExerciseRepository>(),
+              )..initialize(),
+            ),
+            // =======================================
+            // Camera ViewModel - 恢復相機功能
+            // =======================================
+            ChangeNotifierProvider<CameraViewModel>(
+              create: (context) {
+                // 創建一個 CameraService 實例
+                final cameraService = CameraService();
+
+                return CameraViewModel(
+                  getAvailableCamerasUseCase: context.read<GetAvailableCamerasUseCase>(),
+                  initializeCameraUseCase: context.read<InitializeCameraUseCase>(),
+                  takePictureUseCase: context.read<TakePictureUseCase>(),
+                  toggleFlashUseCase: context.read<ToggleFlashUseCase>(),
+                  switchCameraUseCase: context.read<SwitchCameraUseCase>(),
+                  pickImagesFromGalleryUseCase: context.read<PickImagesFromGalleryUseCase>(),
+                  analyzeImageUseCase: context.read<AnalyzeImageUseCase>(),
+                  performVolumeCalculationUseCase: context.read<PerformVolumeCalculationUseCase>(),
+                  cameraService: cameraService,
+                );
+              },
+            ),
+          ],
+          // MultiProvider 的 child 是 MaterialApp.router，表示整個應用都將使用 GoRouter 進行路由管理。
+          child: MaterialApp.router(
+            title: '智慧營養追蹤應用程式',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              primarySwatch: Colors.blue,
+              useMaterial3: true,
+            ),
+            routerConfig: AppRouter.router, // 指定 GoRouter 的設定
           ),
-        ),
-        // 註解：暫時停用 CameraViewModel Provider（相機由 camera_screen_full.dart 獨立管理）
-        // 只在非 Web 平台提供 CameraViewModel
-        // if (!kIsWeb)
-        //   ChangeNotifierProvider<CameraViewModel>(
-        //     create: (context) => CameraViewModel(
-        //       getAvailableCamerasUseCase: context.read<GetAvailableCamerasUseCase>(),
-        //       initializeCameraUseCase: context.read<InitializeCameraUseCase>(),
-        //       takePictureUseCase: context.read<TakePictureUseCase>(),
-        //       toggleFlashUseCase: context.read<ToggleFlashUseCase>(),
-        //       switchCameraUseCase: context.read<SwitchCameraUseCase>(),
-        //       pickImagesFromGalleryUseCase: context.read<PickImagesFromGalleryUseCase>(),
-        //       analyzeImageUseCase: context.read<AnalyzeImageUseCase>(),
-        //       performVolumeCalculationUseCase: context.read<PerformVolumeCalculationUseCase>(),
-        //       cameraService: context.read<CameraService>(),
-        //     ),
-        //   ),
-        ChangeNotifierProvider<BodyAnalysisViewModel>(
-          create: (context) => BodyAnalysisViewModel(
-            context.read<GetBodyMetricsUseCase>(),
-            context.read<UpdateBodyMetricsUseCase>(),
-          ),
-        ),
-        ChangeNotifierProvider<StatisticsViewModel>(
-          create: (context) => StatisticsViewModel(
-            getDailyNutritionUseCase: context.read<GetDailyNutritionUseCase>(),
-            getWeeklyNutritionUseCase: context.read<GetWeeklyNutritionUseCase>(),
-            getWeightHistoryUseCase: context.read<GetWeightHistoryUseCase>(),
-            getMealDistributionUseCase: context.read<GetMealDistributionUseCase>(),
-          ),
-        ),
-        ChangeNotifierProvider<ExerciseViewModel>(
-          create: (context) => ExerciseViewModel(
-            context.read<ExerciseRepository>(),
-          )..initialize(),
-        ),
-      ],
-      child: MaterialApp.router(
-        title: '智慧營養追蹤應用程式',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          useMaterial3: true,
-        ),
-        routerConfig: AppRouter.router,
-      ),
-    );
+        );
       },
     );
   }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../nutrition/data/models/nutrient_data.dart';
 import '../../data/models/chat_message.dart';
 import '../../../../core/services/api/socket_service.dart';
+import '../../../../core/services/firestore_service.dart';
 import '../../../auth/presentation/pages/login_page.dart';
 import '../widgets/side_menu.dart';
 import 'dart:async';
@@ -40,6 +41,11 @@ class _HomePageContentState extends State<HomePageContent> {
   StreamSubscription<bool>? _connectionSubscription;
   StreamSubscription<Map<String, dynamic>>? _responseSubscription;
 
+  // Firestore 服務
+  final FirestoreService _firestoreService = FirestoreService();
+  StreamSubscription? _userDataSubscription;
+  StreamSubscription? _foodEntriesSubscription;
+
   // AI 對話歷史記錄
   List<ChatMessage> _conversationHistory = [];
 
@@ -49,6 +55,12 @@ class _HomePageContentState extends State<HomePageContent> {
   // 訊息輸入狀態
   bool _hasMessageText = false;
 
+  // 是否正在載入用戶數據
+  bool _isLoadingUserData = true;
+
+  // 今日營養統計數據
+  Map<String, dynamic>? _todayNutrition;
+
   // ====================================================================
   // 首頁建構方法和主要 UI
   // ====================================================================
@@ -56,6 +68,8 @@ class _HomePageContentState extends State<HomePageContent> {
   void initState() {
     super.initState();
     AppLogger.logEvent('首頁初始化');
+    _loadUserBodyData();
+    _loadTodayFoodEntries();
     _initializeSocket();
 
     // 監聽文字輸入變化
@@ -73,8 +87,103 @@ class _HomePageContentState extends State<HomePageContent> {
   void dispose() {
     _connectionSubscription?.cancel();
     _responseSubscription?.cancel();
+    _userDataSubscription?.cancel();
+    _foodEntriesSubscription?.cancel();
     _messageController.dispose();
     super.dispose();
+  }
+
+  /// 載入使用者身體數據
+  void _loadUserBodyData() async {
+    try {
+      // 使用 Stream 來即時監聽數據變化
+      _userDataSubscription = _firestoreService.getUserBodyDataStream().listen((snapshot) {
+        if (snapshot.exists && mounted) {
+          final data = snapshot.data() as Map<String, dynamic>?;
+          if (data != null) {
+            setState(() {
+              // 更新目標卡路里（從 Firebase 讀取）
+              targetCalories = (data['targetCalories'] ?? data['suggested_calories'] ?? 2000).toDouble();
+
+              // 注意：當日已攝取卡路里會從 _loadTodayFoodEntries() 中更新
+
+              // 更新營養素目標比例
+              if (data['targetProtein'] != null &&
+                  data['targetCarbs'] != null &&
+                  data['targetFat'] != null) {
+                final protein = (data['targetProtein'] as num).toDouble();
+                final carbs = (data['targetCarbs'] as num).toDouble();
+                final fat = (data['targetFat'] as num).toDouble();
+
+                // 計算百分比（基於卡路里）
+                final proteinCal = protein * 4;
+                final carbsCal = carbs * 4;
+                final fatCal = fat * 9;
+                final total = proteinCal + carbsCal + fatCal;
+
+                if (total > 0) {
+                  nutrients = [
+                    NutrientData('蛋白質', (proteinCal / total * 100), Colors.blue[300]!),
+                    NutrientData('碳水化合物', (carbsCal / total * 100), Colors.grey[400]!),
+                    NutrientData('脂肪', (fatCal / total * 100), Colors.grey[400]!),
+                    NutrientData('膳食纖維', 15, Colors.grey[400]!), // 膳食纖維暫時固定
+                  ];
+                }
+              }
+
+              _isLoadingUserData = false;
+            });
+          }
+        } else if (mounted) {
+          setState(() {
+            _isLoadingUserData = false;
+          });
+        }
+      });
+    } catch (e) {
+      print('載入使用者身體數據失敗: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingUserData = false;
+        });
+      }
+    }
+  }
+
+  /// 載入今日飲食日記並計算營養攝取
+  void _loadTodayFoodEntries() {
+    try {
+      // 監聽今日飲食日記的即時更新
+      _foodEntriesSubscription = _firestoreService.getTodayFoodEntriesStream().listen((snapshot) {
+        if (mounted) {
+          // 計算今日營養攝取
+          final nutrition = _firestoreService.calculateDailyNutritionFromEntries(snapshot);
+
+          setState(() {
+            _todayNutrition = nutrition;
+
+            // 更新當前已攝取卡路里
+            currentCalories = nutrition['totalCalories'];
+
+            // 如果有詳細營養數據，更新營養素比例圖表
+            if (nutrition['hasDetailedNutrition'] == true) {
+              final percentages = _firestoreService.calculateNutrientPercentages(nutrition);
+
+              nutrients = [
+                NutrientData('蛋白質', percentages['protein']!, Colors.blue[300]!),
+                NutrientData('碳水化合物', percentages['carbs']!, Colors.orange[300]!),
+                NutrientData('脂肪', percentages['fat']!, Colors.green[300]!),
+                NutrientData('膳食纖維', 15, Colors.grey[400]!), // 膳食纖維比例暫時固定
+              ];
+            }
+          });
+
+          print('今日營養統計更新: ${nutrition['totalCalories']} kcal');
+        }
+      });
+    } catch (e) {
+      print('載入今日飲食日記失敗: $e');
+    }
   }
 
   /// 初始化 Socket.IO 連接
@@ -845,7 +954,7 @@ class _HomePageContentState extends State<HomePageContent> {
   }
 
   // 處理 RAG 回應
-  void _handleRagResponse(Map<String, dynamic> response) {
+  void _handleRagResponse(Map<String, dynamic> response) async {
     if (response['error'] == true) {
       // 處理錯誤回應
       ScaffoldMessenger.of(context).showSnackBar(
@@ -871,6 +980,9 @@ class _HomePageContentState extends State<HomePageContent> {
         ));
       });
 
+      // 從 AI 回應中提取身體數據
+      await _extractAndSaveBodyData(aiResponse);
+
       // 顯示簡短通知
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -879,6 +991,61 @@ class _HomePageContentState extends State<HomePageContent> {
           duration: Duration(seconds: 1),
         ),
       );
+    }
+  }
+
+  /// 從 AI 回應和使用者輸入中提取身體數據並儲存
+  Future<void> _extractAndSaveBodyData(String aiResponse) async {
+    try {
+      // 合併使用者最近的輸入和 AI 回應進行分析
+      String textToAnalyze = aiResponse;
+
+      // 如果對話歷史中有使用者的最近輸入，也加入分析
+      if (_conversationHistory.length >= 2) {
+        final lastUserMessage = _conversationHistory[_conversationHistory.length - 2];
+        if (lastUserMessage.isUser) {
+          textToAnalyze = '${lastUserMessage.message} $aiResponse';
+        }
+      }
+
+      // 使用 FirestoreService 的方法提取身體數據
+      final extractedData = _firestoreService.parseBodyDataFromText(textToAnalyze);
+
+      // 如果提取到任何數據，則更新到 Firebase
+      if (extractedData.isNotEmpty) {
+        print('提取到身體數據: $extractedData');
+
+        // 更新到 Firebase
+        await _firestoreService.updateUserBodyData(extractedData);
+
+        // 通知 RAG 系統身體數據已更新（如果已連接）
+        if (_isConnected) {
+          _socketService.sendBodyDataUpdate(extractedData);
+        }
+
+        // 顯示通知告知使用者數據已更新
+        if (mounted) {
+          final updatedFields = extractedData.keys.join('、');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已更新您的身體數據：$updatedFields'),
+              backgroundColor: Colors.blue,
+              duration: const Duration(seconds: 3),
+              action: SnackBarAction(
+                label: '查看',
+                textColor: Colors.white,
+                onPressed: () {
+                  // 可以導航到個人資料頁面
+                  context.push('/settings');
+                },
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      print('提取或儲存身體數據時發生錯誤: $e');
+      // 不顯示錯誤訊息給使用者，因為這是背景操作
     }
   }
 

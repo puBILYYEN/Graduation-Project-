@@ -10,7 +10,8 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/profile_setup_page.dart';
 import '../../features/home/presentation/pages/main_frame.dart';
 // import '../../features/camera/presentation/pages/smart_camera_page.dart';  // 已註解：改用完整版相機頁面
-import '../../pages/camera/camera_screen_full.dart';  // 完整功能的相機頁面
+import '../../pages/camera/camera_screen_full.dart' as legacy;  // 舊版相機頁面（備用）
+import '../../features/camera/presentation/pages/camera_screen.dart';  // ViewModel 版本相機頁面
 import '../../features/camera/presentation/pages/test_camera_page.dart';  // 測試頁面
 import '../../features/nutrition/presentation/pages/nutrition_label_screen.dart';
 import '../../features/measurement/presentation/pages/reference_measurement_page.dart';

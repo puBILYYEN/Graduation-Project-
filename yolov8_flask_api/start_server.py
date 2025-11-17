@@ -19,11 +19,11 @@ print()
 checks = []
 
 # 1. 檢查 YOLO 模型
-if os.path.exists('初試v2.pt'):
+if os.path.exists('a11171200.pt'):
     print("[OK] YOLO 模型文件存在")
     checks.append(True)
 else:
-    print("[ERROR] YOLO 模型文件不存在: 初試v2.pt")
+    print("[ERROR] YOLO 模型文件不存在: a11171200.pt")
     checks.append(False)
 
 # 2. 檢查類別文件

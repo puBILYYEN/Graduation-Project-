@@ -118,26 +118,28 @@ class CameraViewModel extends ChangeNotifier {
   /// 分階段初始化，避免資源競爭
   Future<void> initialize() async {
     try {
+      debugPrint('🚀 [ViewModel] 開始初始化相機...');
+
       // 第一階段：初始化相機
       await _initializeCamera();
+      debugPrint('✅ [ViewModel] 相機初始化完成');
 
-      // 第二階段：延遲啟動方向偵測
+      // 第二階段：立即啟動方向偵測（不延遲）
       if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 1000));
-        if (mounted) {
-          _startOrientationDetection();
-        }
-      }
+        debugPrint('🧭 [ViewModel] 啟動方向偵測');
+        _startOrientationDetection();
 
-      // 第三階段：添加穩定性監控
-      if (mounted) {
-        await Future.delayed(const Duration(milliseconds: 2000));
-        if (mounted) {
-          _startStabilityMonitoring();
-        }
+        // 在背景異步啟動穩定性監控，不阻塞UI
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            debugPrint('📊 [ViewModel] 啟動穩定性監控');
+            _startStabilityMonitoring();
+          }
+        });
       }
     } catch (e) {
       logSync('分階段初始化失敗: $e');
+      debugPrint('❌ [ViewModel] 初始化失敗: $e');
     }
   }
 
@@ -202,23 +204,29 @@ class CameraViewModel extends ChangeNotifier {
 
   /// 初始化相機 - 異步執行，避免阻塞 UI
   Future<void> _initializeCamera() async {
-    if (kIsWeb) return;
     _setLoading(true);
 
     try {
-      // 先設置相機列表
+      // 先初始化 CameraService 以獲取可用相機列表
+      debugPrint('   [ViewModel] 初始化 CameraService...');
+      await _cameraService.initializeCameras();
+
+      // 再設置相機列表
       _cameras = _cameraService.cameras;
       if (_cameras.isEmpty) {
-        logSync('未找到可用的相機設備');
+        debugPrint('   ❌ [ViewModel] 未找到可用的相機設備');
+        _isInitialized = false;
+        if (mounted) notifyListeners();
         return;
       }
 
-      // 異步初始化相機控制器，避免阻塞主線程
-      await Future.delayed(const Duration(milliseconds: 100)); // 小延遲讓 UI 更新
+      debugPrint('   ✅ [ViewModel] 找到 ${_cameras.length} 個可用相機');
+
+      // 直接初始化相機控制器，移除不必要的延遲
       await _initializeCameraController(_currentCameraIndex);
 
     } catch (e) {
-      logSync('相機初始化失敗: $e');
+      debugPrint('   ❌ [ViewModel] 相機初始化失敗: $e');
       _isInitialized = false;
       if (mounted) notifyListeners();
     } finally {
@@ -229,10 +237,10 @@ class CameraViewModel extends ChangeNotifier {
   /// 初始化相機控制器 - 改良版本，加強錯誤處理
   Future<void> _initializeCameraController(int cameraIndex) async {
     if (!mounted || _cameras.isEmpty || cameraIndex >= _cameras.length) {
+      debugPrint('   ❌ [ViewModel] 無法初始化：mounted=$mounted, cameras=${_cameras.length}, index=$cameraIndex');
       return;
     }
 
-    _setLoading(true);
     _isInitialized = false;
     if (mounted) notifyListeners();
 
@@ -241,11 +249,11 @@ class CameraViewModel extends ChangeNotifier {
       await _controller?.dispose();
       _controller = null;
     } catch (e) {
-      logSync('釋放舊相機控制器時出錯: $e');
+      debugPrint('   ⚠️ [ViewModel] 釋放舊控制器時出錯: $e');
     }
 
     try {
-      logSync('開始初始化相機控制器: ${_cameras[cameraIndex].name}');
+      debugPrint('   🎥 [ViewModel] 初始化相機控制器: ${_cameras[cameraIndex].name}');
 
       // 初始化新的控制器
       _controller = await _initializeCameraUseCase(_cameras[cameraIndex]);
@@ -254,37 +262,46 @@ class CameraViewModel extends ChangeNotifier {
         // 如果在初始化過程中組件被釋放，立即清理
         await _controller?.dispose();
         _controller = null;
+        debugPrint('   ⚠️ [ViewModel] 組件已釋放，取消初始化');
         return;
       }
 
       _isInitialized = true;
       _currentCameraIndex = cameraIndex;
-      logSync('相機控制器初始化成功');
+      debugPrint('   ✅ [ViewModel] 相機控制器初始化成功');
+      debugPrint('   📢 [ViewModel] isInitialized=$_isInitialized, controller=${_controller != null}');
 
-      // 增加一個短暫延遲，以確保原生紋理準備就緒
-      await Future.delayed(const Duration(milliseconds: 200));
+      // 立即通知UI更新，不等待額外延遲
+      if (mounted) {
+        debugPrint('   📢 [ViewModel] 通知 UI 更新...');
+        notifyListeners();
+      }
 
-      // 設置閃光燈（如果需要）
+      // 設置閃光燈（如果需要）- 在背景異步執行
       if (_isFlashOn && _controller != null) {
-        try {
-          await _toggleFlashUseCase(_controller!, FlashMode.torch);
-        } catch (e) {
-          logSync('設置閃光燈失敗: $e');
-        }
+        Future.microtask(() async {
+          try {
+            await _toggleFlashUseCase(_controller!, FlashMode.torch);
+            debugPrint('   💡 [ViewModel] 閃光燈已設置');
+          } catch (e) {
+            debugPrint('   ⚠️ [ViewModel] 設置閃光燈失敗: $e');
+          }
+        });
       }
 
     } catch (e) {
-      logSync('相機控制器初始化失敗: $e');
+      debugPrint('   ❌ [ViewModel] 相機控制器初始化失敗: $e');
       _isInitialized = false;
       _controller = null;
+      if (mounted) notifyListeners();
     } finally {
       _setLoading(false);
-      // notifyListeners 已經在 _setLoading 中調用，不需要重複
     }
   }
 
   void _setLoading(bool loading) {
     _isLoading = loading;
+    debugPrint('   [ViewModel] setLoading($loading), notifying listeners...');
     notifyListeners();
   }
 
@@ -406,15 +423,23 @@ class CameraViewModel extends ChangeNotifier {
         limit: 10,
       );
 
-      if (images.isEmpty) return;
+      debugPrint('   選擇了 ${images.length} 張圖片');
+      if (images.isEmpty) {
+        debugPrint('   ⚠️ 未選擇圖片');
+        return;
+      }
 
+      if (!context.mounted) return;
       if (images.length == 1) {
+        debugPrint('   處理單張圖片: ${images.first.path}');
         _processImage(context, images.first.path);
       } else {
+        debugPrint('   處理多張圖片');
         _processMultipleImages(context, images);
       }
     } catch (e) {
       logSync('選擇圖片失敗: $e');
+      debugPrint('❌ 選擇圖片失敗: $e');
     }
   }
 
@@ -433,15 +458,26 @@ class CameraViewModel extends ChangeNotifier {
   // ====================================================================
 
   Future<void> takeVolumePhoto(BuildContext context) async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
+    debugPrint('📸 takeVolumePhoto 被調用');
+    debugPrint('   controller: ${_controller != null}');
+    debugPrint('   isInitialized: ${_controller?.value.isInitialized ?? false}');
+    debugPrint('   isLoading: $_isLoading');
+
+    if (_controller == null || !_controller!.value.isInitialized) {
+      debugPrint('   ❌ 相機未準備好');
+      return;
+    }
 
     _setLoading(true);
 
     try {
+      debugPrint('   開始拍照...');
       final image = await _controller!.takePicture();
+      debugPrint('   拍照成功: ${image.path}');
       await _performAutoVolumeCalculation(context, image.path);
     } catch (e) {
       logSync('容積計算拍照錯誤: $e');
+      debugPrint('   ❌ 錯誤: $e');
     } finally {
       _setLoading(false);
     }
@@ -449,18 +485,21 @@ class CameraViewModel extends ChangeNotifier {
 
   Future<void> _performAutoVolumeCalculation(BuildContext context, String imagePath) async {
     try {
+      debugPrint('📐 開始自動容積計算');
       _detectedEdges = _performEdgeDetection();
       _containerShape = _detectContainerShape(_detectedEdges);
       final estimatedDimensions = _estimateDimensionsFromEdges();
       _calculatedVolume = _calculateVolumeFromDimensions(estimatedDimensions);
       _showVolumeResult = true;
+      debugPrint('   計算結果: $_calculatedVolume cm³');
       notifyListeners();
 
       await _generateRagData(imagePath, _calculatedVolume);
 
+      if (!mounted) return;
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('容積計算完成！'),
             backgroundColor: Colors.green,
           ),
@@ -468,16 +507,18 @@ class CameraViewModel extends ChangeNotifier {
       }
     } catch (e) {
       logSync('自動容積計算錯誤: $e');
+      debugPrint('❌ 自動容積計算錯誤: $e');
     }
   }
 
   List<Offset> _performEdgeDetection() {
     // Mock implementation
-    return [
-      const Offset(100, 100),
-      const Offset(300, 100),
-      const Offset(300, 400),
-      const Offset(100, 400),
+    debugPrint('   執行邊緣檢測（模擬）');
+    return const [
+      Offset(100, 100),
+      Offset(300, 100),
+      Offset(300, 400),
+      Offset(100, 400),
     ];
   }
 
@@ -541,23 +582,31 @@ class CameraViewModel extends ChangeNotifier {
 
   void _startOrientationDetection() {
     try {
+      debugPrint('🧭 開始方向偵測');
       _accelerometerSubscription?.cancel();
       _accelerometerSubscription = accelerometerEvents.listen(
         (AccelerometerEvent event) {
           if (!mounted) return;
-          final isLandscape = event.x.abs() > event.y.abs();
+
+          // 優化判斷邏輯：使用更大的閾值避免誤判
+          final isLandscape = event.x.abs() > event.y.abs() + 1.0;
+
           if (isLandscape != _isDeviceLandscape) {
             _isDeviceLandscape = isLandscape;
+            debugPrint('🔄 設備方向改變: ${isLandscape ? "橫向" : "縱向"}');
+            debugPrint('   加速度計數據: x=${event.x.toStringAsFixed(2)}, y=${event.y.toStringAsFixed(2)}');
             if (mounted) notifyListeners();
           }
         },
         onError: (error) {
           logSync('加速度計錯誤: $error');
+          debugPrint('❌ 加速度計錯誤: $error');
         },
-        cancelOnError: true,
+        cancelOnError: false, // 改為 false，避免錯誤後停止偵測
       );
     } catch (e) {
       logSync('加速度計初始化失敗: $e');
+      debugPrint('❌ 加速度計初始化失敗: $e');
     }
   }
 }

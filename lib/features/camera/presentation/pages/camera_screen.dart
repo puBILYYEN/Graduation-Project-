@@ -7,15 +7,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-import 'widgets/camera_controls.dart';
-import '../../../../core/widgets/edge_detection_painter.dart';
+import '../../../../core/widgets/edge_detection_painter.dart' as core_edge;
 import 'package:flutter_application_1/features/nutrition/presentation/pages/nutrition_label_screen.dart';
 import 'package:flutter_application_1/features/nutrition/presentation/pages/multi_image_processing_screen.dart';
 import 'package:flutter_application_1/features/measurement/presentation/pages/reference_measurement_page.dart';
 import '../../../../data/models/reference_object.dart';
 import '../../../analysis/data/models/container_analysis.dart';
 import '../../../measurement/data/models/measurement.dart';
-import 'package:flutter_application_1/features/measurement/presentation/widgets/custom_painters.dart';
 import 'package:flutter_application_1/core/services/logging/logger.dart';
 import 'package:flutter_application_1/core/services/api/api_services.dart';
 import 'dart:async';
@@ -89,10 +87,37 @@ class _CameraScreenState extends State<CameraScreen>
     // 延遲初始化測量框架位置，等待widget構建完成
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeMeasurementFramePosition();
+      _initializeCamera();
     });
   }
 
+  /// 初始化相機
+  Future<void> _initializeCamera() async {
+    try {
+      print('[CAMERA DEBUG] 開始初始化相機...');
+
+      // 添加超時保護，最多等待 10 秒
+      await _viewModel.initialize().timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('相機初始化超時（超過10秒）');
+        },
+      );
+
+      print('[CAMERA DEBUG] 相機初始化完成');
+    } catch (e) {
+      print('[CAMERA DEBUG] ERROR: 相機初始化錯誤: $e');
+      setState(() {
+        _hasError = true;
+        _errorMessage = '相機初始化失敗: $e';
+      });
+    }
+  }
+
   void _onViewModelChanged() {
+    debugPrint('📢 [UI] _onViewModelChanged 被調用!');
+    debugPrint('   isInitialized: ${_viewModel.isInitialized}');
+    debugPrint('   controller != null: ${_viewModel.controller != null}');
     setState(() {
       // The UI will be rebuilt whenever the view model notifies its listeners
     });
@@ -608,7 +633,7 @@ class _CameraScreenState extends State<CameraScreen>
           if (_viewModel.detectedEdges.isNotEmpty)
             Positioned.fill(
               child: CustomPaint(
-                painter: EdgeDetectionPainter(_viewModel.detectedEdges),
+                painter: core_edge.EdgeDetectionPainter(_viewModel.detectedEdges),
               ),
             ),
 

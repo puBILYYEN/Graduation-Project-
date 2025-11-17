@@ -36,7 +36,7 @@ except Exception as e:
 print("[TEST 2] 測試 YOLO 模型...")
 try:
     from ultralytics import YOLO
-    model = YOLO('初試v2.pt')
+    model = YOLO('a11171200.pt')
     print("  [OK] YOLO 模型載入成功")
     print()
 except Exception as e:

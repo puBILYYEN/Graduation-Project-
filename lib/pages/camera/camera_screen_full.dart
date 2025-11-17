@@ -275,14 +275,14 @@ class _CameraScreenState extends State<CameraScreen>
 
           // 步驟5：如果方向有變化，記錄並更新UI
           if (needsUpdate) {
-            log('方向檢測: 橫螢幕=$_isDeviceLandscape, 正常豎螢幕=$_isDevicePortraitUp (x=$x, y=$y)');
+            print('[CAMERA DEBUG] 方向檢測: 橫螢幕=$_isDeviceLandscape, 正常豎螢幕=$_isDevicePortraitUp (x=$x, y=$y)');
             setState(() {
               // UI 更新，日誌已在上方記錄
             });
           }
         },
         onError: (error) {
-          log('加速度計錯誤: $error');
+          print('[CAMERA DEBUG] 加速度計錯誤: $error');
           setState(() {
             _isDeviceLandscape = false;
             _isDevicePortraitUp = true;
@@ -290,7 +290,7 @@ class _CameraScreenState extends State<CameraScreen>
         },
       );
     } catch (e) {
-      log('加速度計初始化失敗: $e');
+      print('[CAMERA DEBUG] 加速度計初始化失敗: $e');
     }
   }
 
@@ -2209,38 +2209,38 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // 方向指示箭頭 (豎螢幕且長邊朝上時顯示)
-          if (!_isDeviceLandscape && _isDevicePortraitUp)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 20,
-              left: 20,
-              child: Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.keyboard_arrow_up,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '朝上',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          // 方向指示箭頭 (已移除，避免擋到關閉按鈕)
+          // if (!_isDeviceLandscape && _isDevicePortraitUp)
+          //   Positioned(
+          //     top: MediaQuery.of(context).padding.top + 20,
+          //     left: 20,
+          //     child: Container(
+          //       padding: EdgeInsets.all(12),
+          //       decoration: BoxDecoration(
+          //         color: Colors.black.withOpacity(0.7),
+          //         borderRadius: BorderRadius.circular(20),
+          //       ),
+          //       child: Column(
+          //         mainAxisSize: MainAxisSize.min,
+          //         children: [
+          //           Icon(
+          //             Icons.keyboard_arrow_up,
+          //             color: Colors.white,
+          //             size: 24,
+          //           ),
+          //           SizedBox(height: 4),
+          //           Text(
+          //             '朝上',
+          //             style: TextStyle(
+          //               color: Colors.white,
+          //               fontSize: 12,
+          //               fontWeight: FontWeight.w500,
+          //             ),
+          //           ),
+          //         ],
+          //       ),
+          //     ),
+          //   ),
 
           // 底部控制區域
           Positioned(
@@ -2261,10 +2261,10 @@ class _CameraScreenState extends State<CameraScreen>
               child: SafeArea(
                 child: Padding(
                   padding: EdgeInsets.only(
-                    bottom: 10,
-                    top: isLandscape ? 10 : 20,
-                    left: 20,
-                    right: 20,
+                    bottom: 5,
+                    top: isLandscape ? 8 : 12,
+                    left: 16,
+                    right: 16,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -2272,12 +2272,12 @@ class _CameraScreenState extends State<CameraScreen>
                       // 建議距離文字 (橫向模式下隱藏以節省空間)
                       if (!isLandscape)
                         Padding(
-                          padding: EdgeInsets.only(bottom: 15),
+                          padding: EdgeInsets.only(bottom: 8),
                           child: Text(
                             '建議距離：20-30 公分',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
-                              fontSize: isTablet ? 16 : 14,
+                              fontSize: isTablet ? 14 : 12,
                             ),
                           ),
                         ),
@@ -2358,18 +2358,18 @@ class _CameraScreenState extends State<CameraScreen>
                         ],
                       ),
 
-                      if (!isLandscape) SizedBox(height: 15),
+                      if (!isLandscape) const SizedBox(height: 8),
 
                       // 容積計算控制界面 (拍照前設定)
                       if (!isLandscape) ...[
-                        const SizedBox(height: 15),
+                        const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 10),
-                          margin: const EdgeInsets.symmetric(horizontal: 30),
+                              horizontal: 12, vertical: 8),
+                          margin: const EdgeInsets.symmetric(horizontal: 20),
                           decoration: BoxDecoration(
                             color: Colors.black.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Column(
                             children: [
@@ -2379,22 +2379,23 @@ class _CameraScreenState extends State<CameraScreen>
                                 children: [
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 10),
+                                        horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: Colors.green.withOpacity(0.8),
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Icon(Icons.auto_awesome,
-                                            color: Colors.white, size: 18),
-                                        const SizedBox(width: 8),
+                                            color: Colors.white, size: 16),
+                                        const SizedBox(width: 6),
                                         Text(
                                           '辨識: $_containerShape',
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
+                                            fontSize: 13,
                                           ),
                                         ),
                                       ],
@@ -2402,25 +2403,25 @@ class _CameraScreenState extends State<CameraScreen>
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(
                                 '直接拍照，系統會自動辨識容器形狀並計算容積',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
-                                  fontSize: 12,
+                                  fontSize: 11,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
 
                               // 顯示計算結果
                               if (_showVolumeResult) ...[
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 8),
                                 Container(
                                   width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: Colors.green.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                         color: Colors.green, width: 1),
                                   ),
@@ -2430,16 +2431,16 @@ class _CameraScreenState extends State<CameraScreen>
                                         '計算結果',
                                         style: TextStyle(
                                           color: Colors.green,
-                                          fontSize: 14,
+                                          fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      const SizedBox(height: 5),
+                                      const SizedBox(height: 4),
                                       Text(
                                         '${_calculatedVolume.toStringAsFixed(2)} cm³',
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 18,
+                                          fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -2447,7 +2448,7 @@ class _CameraScreenState extends State<CameraScreen>
                                         '(${(_calculatedVolume / 1000).toStringAsFixed(3)} 公升)',
                                         style: TextStyle(
                                           color: Colors.white.withOpacity(0.8),
-                                          fontSize: 12,
+                                          fontSize: 11,
                                         ),
                                       ),
                                     ],

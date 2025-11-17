@@ -8,7 +8,16 @@
       "Bash(where:*)",
       "Bash(devtunnel create:*)",
       "Bash(devtunnel port create:*)",
-      "Bash(devtunnel host:*)"
+      "Bash(devtunnel host:*)",
+      "Bash(nul)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"c:\\Users\\pop90\\flutter_code\\flutter_application_1\\check_camera.ps1\")",
+      "Bash(powershell:*)",
+      "Bash(start microsoft.windows.camera:)",
+      "Bash(/tmp/old_viewmodel.dart)",
+      "Bash(flutter run:*)",
+      "Bash(Select-String -Pattern \"CAMERA DEBUG|ERROR|CameraException\" -Context 2,2)",
+      "Bash(Select-String -Pattern \"CAMERA DEBUG|ViewModel|notifyListeners|DEBUG INFO|初始化\" -Context 1,1)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
