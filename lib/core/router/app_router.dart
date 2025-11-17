@@ -143,8 +143,8 @@ class AppRouter {
               }
               return MultipleImagesProcessingPage(
                 images: params['images'],
-                onRetakePhoto: params['onRetakePhoto'],
-                onSelectFromGallery: params['onSelectFromGallery'],
+                onRetakePhoto: params['onRetakePhoto'] ?? () {}, // ✅ 修復：提供預設空函數
+                onSelectFromGallery: params['onSelectFromGallery'] ?? () {}, // ✅ 修復：提供預設空函數
               );
             },
           ),
