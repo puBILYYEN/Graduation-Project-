@@ -15,8 +15,9 @@ def setup_pytorch_safe_globals():
         from ultralytics.nn.modules.conv import Conv
         from ultralytics.nn.modules.block import C2f, SPPF, Bottleneck
 
-        # 導入常用的 PyTorch 模組類別
-        from torch.nn.modules.container import Sequential
+        # 導入常用的 PyTorch 模組類別（包含容器類別 - ModuleList 修復）
+        from torch.nn.modules.container import Sequential, ModuleList, ModuleDict
+        from torch.nn.parameter import Parameter
         from torch.nn.modules.linear import Linear
         from torch.nn.modules.conv import Conv2d
         from torch.nn.modules.batchnorm import BatchNorm2d
@@ -35,8 +36,11 @@ def setup_pytorch_safe_globals():
             C2f,
             SPPF,
             Bottleneck,
-            # PyTorch 容器
+            # PyTorch 容器（關鍵修復 - 包含 ModuleList）
             Sequential,
+            ModuleList,
+            ModuleDict,
+            Parameter,
             # PyTorch 層
             Linear,
             Conv2d,
@@ -47,7 +51,7 @@ def setup_pytorch_safe_globals():
             ReLU,
             SiLU
         ])
-        print('[PyTorch Fix] 已添加 ultralytics 模組（包含 Conv）和 PyTorch 核心類別到安全全域變數')
+        print('[PyTorch Fix] 已添加 ultralytics 模組、PyTorch 容器（ModuleList, ModuleDict）和核心類別到安全全域變數')
         return True
     except ImportError as e:
         print(f'[PyTorch Fix] 無法導入必要類別: {e}')
