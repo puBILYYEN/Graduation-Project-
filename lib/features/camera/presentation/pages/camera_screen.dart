@@ -58,17 +58,19 @@ class _CameraScreenState extends State<CameraScreen>
   // The state is now managed by the CameraViewModel.
   // We only keep UI-related state here.
 
+  // ========== 測量功能已停用 ==========
   // 可拖拽測量框架相關變數
-  double _framePosX = 50.0;
-  double _framePosY = 100.0;
-  double _frameWidth = 200.0;
-  double _frameHeight = 150.0;
-  bool _showMeasurementFrame = true;
+  // double _framePosX = 50.0;
+  // double _framePosY = 100.0;
+  // double _frameWidth = 200.0;
+  // double _frameHeight = 150.0;
+  // bool _showMeasurementFrame = true;
 
   // 邊界檢查常數
-  static const double _BOTTOM_SAFE_ZONE = 250.0;
-  static const double _TOP_SAFE_ZONE = 100.0;
-  static const double _SIDE_MARGIN = 15.0;
+  // static const double _BOTTOM_SAFE_ZONE = 250.0;
+  // static const double _TOP_SAFE_ZONE = 100.0;
+  // static const double _SIDE_MARGIN = 15.0;
+  // ========================================
 
   /// 初始化相機頁面狀態 - 設定觀察器、螢幕方向並啟動相機
   @override
@@ -86,7 +88,7 @@ class _CameraScreenState extends State<CameraScreen>
 
     // 延遲初始化測量框架位置，等待widget構建完成
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeMeasurementFramePosition();
+      // _initializeMeasurementFramePosition(); // 測量功能已停用
       _initializeCamera();
     });
   }
@@ -132,33 +134,35 @@ class _CameraScreenState extends State<CameraScreen>
     });
   }
 
+  // ========== 測量功能已停用 ==========
   /// 初始化測量框架位置 - 將框架置中在相機預覽有效區域
-  void _initializeMeasurementFramePosition() {
-    if (!mounted) return;
+  // void _initializeMeasurementFramePosition() {
+  //   if (!mounted) return;
 
-    // 獲取螢幕尺寸
-    final Size screenSize = MediaQuery.of(context).size;
+  //   // 獲取螢幕尺寸
+  //   final Size screenSize = MediaQuery.of(context).size;
 
-    // 計算有效相機預覽區域（扣除頂部和底部安全區域）
-    final double availableWidth = screenSize.width - (2 * _SIDE_MARGIN);
-    final double availableHeight =
-        screenSize.height - _TOP_SAFE_ZONE - _BOTTOM_SAFE_ZONE;
+  //   // 計算有效相機預覽區域（扣除頂部和底部安全區域）
+  //   final double availableWidth = screenSize.width - (2 * _SIDE_MARGIN);
+  //   final double availableHeight =
+  //       screenSize.height - _TOP_SAFE_ZONE - _BOTTOM_SAFE_ZONE;
 
-    // 計算居中位置
-    final double centerX = (availableWidth - _frameWidth) / 2 + _SIDE_MARGIN;
-    final double centerY =
-        (availableHeight - _frameHeight) / 2 + _TOP_SAFE_ZONE;
+  //   // 計算居中位置
+  //   final double centerX = (availableWidth - _frameWidth) / 2 + _SIDE_MARGIN;
+  //   final double centerY =
+  //       (availableHeight - _frameHeight) / 2 + _TOP_SAFE_ZONE;
 
-    setState(() {
-      _framePosX = centerX.clamp(
-          _SIDE_MARGIN, screenSize.width - _frameWidth - _SIDE_MARGIN);
-      _framePosY = centerY.clamp(
-          _TOP_SAFE_ZONE, screenSize.height - _BOTTOM_SAFE_ZONE - _frameHeight);
-    });
+  //   setState(() {
+  //     _framePosX = centerX.clamp(
+  //         _SIDE_MARGIN, screenSize.width - _frameWidth - _SIDE_MARGIN);
+  //     _framePosY = centerY.clamp(
+  //         _TOP_SAFE_ZONE, screenSize.height - _BOTTOM_SAFE_ZONE - _frameHeight);
+  //   });
 
-    print(
-        '測量框架已初始化至居中位置: (${_framePosX.toStringAsFixed(1)}, ${_framePosY.toStringAsFixed(1)})');
-  }
+  //   print(
+  //       '測量框架已初始化至居中位置: (${_framePosX.toStringAsFixed(1)}, ${_framePosY.toStringAsFixed(1)})');
+  // }
+  // ========================================
 
   /// 清理資源方法 - 移除觀察器、取消訂閱並釋放相機資源
   @override
@@ -382,39 +386,37 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
-          // 方向指示箭頭 (已隱藏，避免遮擋關閉按鈕)
+          // 方向指示箭頭 (已隱藏，移到屏幕外避免攔截觸摸事件)
           if (!_viewModel.isDeviceLandscape)
             Positioned(
               top: MediaQuery.of(context).padding.top + 20,
-              left: 20,
+              left: -1000, // 移到屏幕外，完全不可見且不攔截觸摸
               child: Opacity(
-                opacity: 0.0, // 完全透明，不可見
-                child: IgnorePointer( // 忽略觸摸事件
-                  child: Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.keyboard_arrow_up,
+                opacity: 0.0, // 雙重保險：透明 + 移出屏幕
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.keyboard_arrow_up,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        '朝上',
+                        style: TextStyle(
                           color: Colors.white,
-                          size: 24,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          '朝上',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -538,8 +540,9 @@ class _CameraScreenState extends State<CameraScreen>
 
                       if (!isLandscape) SizedBox(height: 15),
 
+                      // ========== 測量功能已停用 ==========
                       // 容積計算控制界面 (拍照前設定)
-                      if (!_viewModel.isDeviceLandscape) ...[
+                      /* if (!_viewModel.isDeviceLandscape) ...[
                         const SizedBox(height: 15),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -635,7 +638,8 @@ class _CameraScreenState extends State<CameraScreen>
                             ],
                           ),
                         ),
-                      ],
+                      ], */
+                      // ========================================
                     ],
                   ),
                 ),
@@ -643,8 +647,9 @@ class _CameraScreenState extends State<CameraScreen>
             ),
           ),
 
+          // ========== 測量功能已停用 ==========
           // 邊緣檢測疊加層（有檢測結果時顯示）
-          if (_viewModel.detectedEdges.isNotEmpty)
+          /* if (_viewModel.detectedEdges.isNotEmpty)
             Positioned.fill(
               child: CustomPaint(
                 painter: core_edge.EdgeDetectionPainter(_viewModel.detectedEdges),
@@ -729,7 +734,8 @@ class _CameraScreenState extends State<CameraScreen>
                   ),
                 ),
               ),
-            ),
+            ), */
+          // ========================================
         ],
       ),
     );
