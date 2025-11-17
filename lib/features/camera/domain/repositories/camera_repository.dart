@@ -7,6 +7,6 @@ abstract class CameraRepository {
   Future<XFile> takePicture(CameraController controller);
   Future<void> setFlashMode(CameraController controller, FlashMode mode);
   Future<List<XFile>> pickImagesFromGallery();
-  Future<Map<String, dynamic>> analyzeImage(String imagePath);
+  Future<Map<String, dynamic>> analyzeImage(String imagePath, {String? userId});
   Future<Map<String, dynamic>> performVolumeCalculation(String imagePath);
 }

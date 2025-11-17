@@ -82,8 +82,8 @@ class YoloApiService {
     }
   }
 
-  /// 分析圖片並取得 AI 辨識結果
-  static Future<AIAnalysisResult?> analyzeImage(File imageFile) async {
+  /// 分析圖片並取得 AI 辨識結果（支援個性化建議）
+  static Future<AIAnalysisResult?> analyzeImage(File imageFile, {String? userId}) async {
     try {
       // 檢查文件是否存在
       if (!await imageFile.exists()) {
@@ -92,10 +92,18 @@ class YoloApiService {
 
       print('正在向 YOLO API 發送圖片分析請求...');
 
+      // 準備 fields（包含 user_id 以啟用 RAG 個性化建議）
+      final fields = <String, String>{};
+      if (userId != null && userId.isNotEmpty) {
+        fields['user_id'] = userId;
+        print('✓ 包含 user_id，將使用 RAG 生成個性化建議');
+      }
+
       // 使用 ApiClient 發送多部分表單請求
       final streamedResponse = await ApiClient.multipartRequest(
         ApiEndpoints.predict,
         'POST',
+        fields: fields,
         files: {'image': imageFile.path},
       );
 

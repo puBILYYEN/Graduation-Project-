@@ -36,8 +36,8 @@ class CameraRepositoryImpl implements CameraRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> analyzeImage(String imagePath) {
-    return _imageProcessingDatasource.analyzeImage(imagePath);
+  Future<Map<String, dynamic>> analyzeImage(String imagePath, {String? userId}) {
+    return _imageProcessingDatasource.analyzeImage(imagePath, userId: userId);
   }
 
   @override

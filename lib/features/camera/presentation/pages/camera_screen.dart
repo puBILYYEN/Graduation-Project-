@@ -235,13 +235,27 @@ class _CameraScreenState extends State<CameraScreen>
           // 相機預覽或錯誤顯示（響應式全螢幕）
           if (_viewModel.isInitialized && _viewModel.controller != null)
             Positioned.fill(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _viewModel.controller!.value.previewSize!.height,
-                  height: _viewModel.controller!.value.previewSize!.width,
-                  child: CameraPreview(_viewModel.controller!),
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final previewSize = _viewModel.controller!.value.previewSize;
+                  if (previewSize == null) {
+                    print('[CameraScreen] ⚠️ previewSize is null!');
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  print('[CameraScreen] Preview Size: $previewSize');
+                  print('[CameraScreen] Screen Size: ${constraints.maxWidth} x ${constraints.maxHeight}');
+
+                  // ✅ 使用 FittedBox 填滿整個螢幕（會裁切部分內容以填滿）
+                  return FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: previewSize.height,
+                      height: previewSize.width,
+                      child: CameraPreview(_viewModel.controller!),
+                    ),
+                  );
+                },
               ),
             ),
           if (_hasError)

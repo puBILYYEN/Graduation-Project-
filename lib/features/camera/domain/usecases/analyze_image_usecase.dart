@@ -5,7 +5,7 @@ class AnalyzeImageUseCase {
 
   AnalyzeImageUseCase(this.repository);
 
-  Future<Map<String, dynamic>> call(String imagePath) {
-    return repository.analyzeImage(imagePath);
+  Future<Map<String, dynamic>> call(String imagePath, {String? userId}) {
+    return repository.analyzeImage(imagePath, userId: userId);
   }
 }

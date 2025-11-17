@@ -207,18 +207,47 @@ def predict():
         )
         gemini_reply = explain_result['text'] if explain_result['text'] else "無法生成說明"
 
-        # 生成飲食建議
-        diet_prompt = f"""以下是使用者拍攝的食物辨識結果：
+        # 生成飲食建議（整合 RAG 系統）
+        diet_advice = ""
+
+        # 嘗試使用 RAG 生成個性化建議
+        if rag_service_chroma.is_available():
+            logger.info("使用 RAG 系統生成個性化飲食建議")
+            try:
+                # 從 request 獲取使用者ID（如果有提供）
+                user_id = request.form.get('user_id', None)
+                user_profile = {}
+                meal_history = []
+
+                if user_id and firebase_service.is_available():
+                    user_profile = firebase_service.get_user_profile(user_id) or {}
+                    meal_history = firebase_service.get_user_meal_history(user_id, limit=3) or []
+
+                # 使用 RAG 生成個性化建議
+                diet_advice = rag_service_chroma.generate_personalized_advice(
+                    detected_foods,
+                    user_profile,
+                    meal_history
+                )
+                logger.info("✓ RAG 個性化建議生成成功")
+            except Exception as e:
+                logger.error(f"RAG 建議生成失敗: {e}")
+                diet_advice = ""
+
+        # 如果 RAG 失敗或不可用，使用 Gemini 備用方案
+        if not diet_advice:
+            logger.info("使用 Gemini 生成基礎飲食建議")
+            diet_prompt = f"""以下是使用者拍攝的食物辨識結果：
 {json.dumps(predictions, ensure_ascii=False)}
 
 請用繁體中文給出飲食建議，包括健康搭配、熱量注意與份量建議。"""
-        diet_result = llm_manager.generate_with_translation(
-            diet_prompt,
-            context="飲食建議",
-            temperature=0.7,
-            max_tokens=800
-        )
-        diet_advice = diet_result['text'] if diet_result['text'] else "無法生成建議"
+            diet_result = llm_manager.generate_with_translation(
+                diet_prompt,
+                context="飲食建議",
+                temperature=0.7,
+                max_tokens=800
+            )
+            diet_advice = diet_result['text'] if diet_result['text'] else "無法生成建議"
 
         response_data = {
             'predictions': predictions,

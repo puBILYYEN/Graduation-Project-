@@ -15,10 +15,13 @@ class ImageProcessingDatasource {
   })  : _firestore = firestore ?? FirebaseFirestore.instance,
         _firebaseStorage = firebaseStorage ?? FirebaseStorage.instance;
 
-  /// ✅ 修復：使用真實的 YOLO API 而非假資料
-  Future<Map<String, dynamic>> analyzeImage(String imagePath) async {
+  /// ✅ 修復：使用真實的 YOLO API 而非假資料（支援 RAG 個性化建議）
+  Future<Map<String, dynamic>> analyzeImage(String imagePath, {String? userId}) async {
     try {
       print('[ImageProcessing] 開始分析圖片: $imagePath');
+      if (userId != null) {
+        print('[ImageProcessing] 使用者ID: $userId（將使用 RAG 個性化建議）');
+      }
 
       // 檢查 YOLO 服務是否可用
       final isAvailable = await YoloApiService.isServiceAvailable();
@@ -27,9 +30,9 @@ class ImageProcessingDatasource {
         return _getFallbackData();
       }
 
-      // 呼叫真實的 YOLO API
+      // 呼叫真實的 YOLO API（傳遞 userId 以啟用 RAG）
       final File imageFile = File(imagePath);
-      final AIAnalysisResult? result = await YoloApiService.analyzeImage(imageFile);
+      final AIAnalysisResult? result = await YoloApiService.analyzeImage(imageFile, userId: userId);
 
       if (result == null || result.predictions.isEmpty) {
         print('[ImageProcessing] ⚠️ YOLO 未檢測到任何食物，使用備用資料');

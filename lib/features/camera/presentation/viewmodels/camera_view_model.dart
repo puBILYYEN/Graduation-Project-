@@ -5,6 +5,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/services/app_logger.dart';
 import 'package:flutter/material.dart';
@@ -393,9 +394,24 @@ class CameraViewModel extends ChangeNotifier {
 
       if (!context.mounted) return;
 
+      // 獲取當前登入使用者的 ID（用於 RAG 個性化建議）
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId != null) {
+        debugPrint('   👤 當前使用者 ID: $userId（將使用 RAG 個性化建議）');
+      } else {
+        debugPrint('   ℹ️ 未登入使用者，將使用基礎 Gemini 建議');
+      }
+
       logSync('正在上傳圖片至後端進行分析...');
-      final analysisResult = await _analyzeImageUseCase(image.path);
+      final analysisResult = await _analyzeImageUseCase(image.path, userId: userId);
       logSync('後端分析完成');
+
+      // ✅ Debug: 列印完整的分析結果
+      debugPrint('   📊 分析結果內容:');
+      debugPrint('   - food_items: ${analysisResult['food_items']}');
+      debugPrint('   - gemini_reply: ${analysisResult['gemini_reply']}');
+      debugPrint('   - diet_advice: ${analysisResult['diet_advice']}');
+      debugPrint('   - analysis_time: ${analysisResult['analysis_time']}');
 
       if (context.mounted) {
         context.push('/camera/nutrition-label', extra: {

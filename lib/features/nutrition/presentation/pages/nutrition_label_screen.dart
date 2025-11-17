@@ -130,10 +130,22 @@ class _NutritionLabelScreenState extends State<NutritionLabelScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Debug: 列印接收到的 analysis 資料
+    print('[NutritionLabel] 接收到的 analysis 資料:');
+    print('  - 完整內容: ${widget.analysis}');
+    print('  - food_items: ${widget.analysis['food_items']}');
+    print('  - gemini_reply: ${widget.analysis['gemini_reply']}');
+    print('  - diet_advice: ${widget.analysis['diet_advice']}');
+
     // 從 widget.analysis 解析結果
     final foodItems = widget.analysis['food_items'] as List? ?? [];
     final geminiReply = widget.analysis['gemini_reply'] as String? ?? '';
     final dietAdvice = widget.analysis['diet_advice'] as String? ?? '';
+
+    print('[NutritionLabel] 解析後的資料:');
+    print('  - foodItems 數量: ${foodItems.length}');
+    print('  - geminiReply 長度: ${geminiReply.length}');
+    print('  - dietAdvice 長度: ${dietAdvice.length}');
 
     return Scaffold(
       appBar: AppBar(
