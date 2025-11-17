@@ -8,16 +8,14 @@ FROM python:3.12-slim
 # 設定工作目錄
 WORKDIR /app
 
-# 設定環境變數
+# 設定環境變數（不包含 offline 模式，下載時需要網路）
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     HF_HOME=/app/models_cache \
     TRANSFORMERS_CACHE=/app/models_cache \
-    SENTENCE_TRANSFORMERS_HOME=/app/models_cache \
-    TRANSFORMERS_OFFLINE=1 \
-    HF_HUB_OFFLINE=1
+    SENTENCE_TRANSFORMERS_HOME=/app/models_cache
 
 # 安裝系統依賴（OpenCV 和其他需要的套件）
 RUN apt-get update && apt-get install -y \
@@ -37,6 +35,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 預先下載機器學習模型（在複製完整應用程式前執行以利用 Docker 快取）
 COPY download_models.py .
 RUN python download_models.py
+
+# 模型下載完成後，啟用離線模式（防止 runtime 時嘗試連線 huggingface.co）
+ENV TRANSFORMERS_OFFLINE=1 \
+    HF_HUB_OFFLINE=1
 
 # 複製應用程式代碼和資源
 COPY . .
