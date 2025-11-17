@@ -432,6 +432,41 @@ def handle_nutrition_data(data):
         emit('error', {'message': str(e)})
 
 
+@socketio.on('body_data_update')
+def handle_body_data_update(data):
+    """接收使用者身體數據更新（透過 Socket.IO）"""
+    try:
+        logger.log_socket_event('body_data_update', '收到身體數據更新')
+
+        user_id = data.get('user_id')
+        body_data = data.get('bodyData', {})
+
+        if user_id and firebase_service.is_available():
+            # 儲存身體數據到 Firebase
+            firebase_service.update_user_body_data(user_id, body_data)
+
+            emit('body_data_updated', {
+                'status': 'success',
+                'message': '身體數據已更新',
+                'timestamp': datetime.now().isoformat()
+            })
+
+            logger.info(f"✓ 使用者 {user_id} 身體數據已更新")
+        else:
+            emit('body_data_updated', {
+                'status': 'error',
+                'message': 'Firebase 未啟用或缺少 user_id',
+                'timestamp': datetime.now().isoformat()
+            })
+
+    except Exception as e:
+        logger.log_error_with_trace(e, "更新身體數據")
+        emit('error', {
+            'message': f'更新身體數據失敗: {str(e)}',
+            'timestamp': datetime.now().isoformat()
+        })
+
+
 # ===== 應用啟動時初始化服務 =====
 # 注意：必須在模組級別執行，確保 gunicorn 也能初始化
 logger.info("=" * 60)

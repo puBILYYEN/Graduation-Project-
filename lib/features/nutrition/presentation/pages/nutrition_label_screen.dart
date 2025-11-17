@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 import '../../../../core/services/firestore_service.dart';
 
@@ -24,7 +26,41 @@ class NutritionLabelScreen extends StatefulWidget {
 class _NutritionLabelScreenState extends State<NutritionLabelScreen> {
   bool _isSaving = false;
 
-  /// 確認並加入飲食日記
+  /// ✅ Phase 2: 上傳照片到 Firebase Storage
+  Future<String> _uploadImageToStorage() async {
+    try {
+      print('[NutritionLabel] 開始上傳照片到 Firebase Storage...');
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('使用者未登入');
+      }
+
+      final File file = File(widget.imagePath);
+      if (!await file.exists()) {
+        throw Exception('照片檔案不存在');
+      }
+
+      // 建立唯一檔名
+      final String fileName = 'food_images/${user.uid}/${DateTime.now().millisecondsSinceEpoch}_${file.path.split('/').last}';
+
+      // 上傳檔案
+      final Reference ref = FirebaseStorage.instance.ref().child(fileName);
+      final UploadTask uploadTask = ref.putFile(file);
+      final TaskSnapshot snapshot = await uploadTask;
+
+      // 獲取下載 URL
+      final String downloadUrl = await snapshot.ref.getDownloadURL();
+      print('[NutritionLabel] ✅ 照片上傳成功: $downloadUrl');
+
+      return downloadUrl;
+    } catch (e) {
+      print('[NutritionLabel] ❌ 照片上傳失敗: $e');
+      return ''; // 上傳失敗時返回空字串
+    }
+  }
+
+  /// ✅ Phase 3: 確認並加入飲食日記（包含完整 YOLO 預測資料）
   Future<void> _confirmAndSaveToDiary() async {
     setState(() {
       _isSaving = true;
@@ -34,23 +70,35 @@ class _NutritionLabelScreenState extends State<NutritionLabelScreen> {
       // 1. 從 Provider 獲取 FirestoreService
       final firestoreService = Provider.of<FirestoreService>(context, listen: false);
 
-      // 2. 準備要儲存的資料
-      // 我們從分析結果中提取最重要的資訊：食物名稱
-      // 假設分析結果的格式是 {'predictions': [{'class': 'apple', ...}]}
-      final predictions = widget.analysis['predictions'] as List?;
-      final foodName = predictions?.isNotEmpty ?? false
-          ? predictions!.map((p) => p['class'] as String).join(', ')
+      // 2. 上傳照片到 Firebase Storage
+      final String imageUrl = await _uploadImageToStorage();
+
+      // 3. 準備要儲存的完整資料
+      final foodItems = widget.analysis['food_items'] as List? ?? [];
+      final foodName = foodItems.isNotEmpty
+          ? foodItems.map((item) => item['name'] as String).join(', ')
           : '未知食物';
 
+      // ✅ 儲存完整的 YOLO 預測結果
       final foodData = {
         'name': foodName,
-        'imageUrl': '' , // TODO: 未來可以將圖片上傳到 Firebase Storage 並保存 URL
+        'imageUrl': imageUrl, // ✅ 修復：儲存實際的照片 URL
         'timestamp': Timestamp.now(),
-        // 您可以從 widget.analysis 中加入更多詳細資訊
-        // 'calories': widget.analysis['nutrition']?['calories'] ?? 0,
+
+        // ✅ Phase 3: 儲存完整 YOLO 預測資料
+        'food_items': foodItems.map((item) => {
+          'name': item['name'] ?? '',
+          'confidence': item['confidence'] ?? 0.0,
+          'class_id': item['class_id'] ?? -1,
+        }).toList(),
+
+        // ✅ 儲存 Gemini AI 建議
+        'gemini_reply': widget.analysis['gemini_reply'] ?? '',
+        'diet_advice': widget.analysis['diet_advice'] ?? '',
+        'analysis_time': widget.analysis['analysis_time'] ?? DateTime.now().toIso8601String(),
       };
 
-      // 3. 呼叫服務進行儲存
+      // 4. 呼叫服務進行儲存
       await firestoreService.addFoodDiaryEntry(foodData);
 
       if (!mounted) return;
@@ -83,12 +131,13 @@ class _NutritionLabelScreenState extends State<NutritionLabelScreen> {
   @override
   Widget build(BuildContext context) {
     // 從 widget.analysis 解析結果
-    final predictions = widget.analysis['predictions'] as List? ?? [];
-    final summary = predictions.map((p) => p['class']).join(', ');
+    final foodItems = widget.analysis['food_items'] as List? ?? [];
+    final geminiReply = widget.analysis['gemini_reply'] as String? ?? '';
+    final dietAdvice = widget.analysis['diet_advice'] as String? ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('辨識結果'),
+        title: const Text('AI 營養分析'),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
@@ -101,33 +150,102 @@ class _NutritionLabelScreenState extends State<NutritionLabelScreen> {
             // 顯示圖片
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.file(File(widget.imagePath)),
+              child: Image.file(
+                File(widget.imagePath),
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
             ),
             const SizedBox(height: 24),
 
-            // 顯示分析結果
+            // ✅ 顯示辨識出的食物（帶信心度）
             Text(
-              '辨識出的食物',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              '🍽️ 辨識出的食物',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Colors.blue[800],
+              ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              summary.isNotEmpty ? summary : '未能辨識出任何食物',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
+            const SizedBox(height: 12),
+            ...foodItems.map((item) {
+              final name = item['name'] as String? ?? '未知';
+              final confidence = item['confidence'] as double? ?? 0.0;
+              final confidencePercent = (confidence * 100).toStringAsFixed(1);
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        name,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                    Text(
+                      '$confidencePercent%',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
             const SizedBox(height: 24),
 
-            // 顯示原始 JSON (方便除錯)
-            const Text(
-              '原始分析資料 (JSON)',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              color: Colors.grey[200],
-              child: Text(widget.analysis.toString()),
-            ),
+            // ✅ 顯示 Gemini AI 建議
+            if (geminiReply.isNotEmpty) ...[
+              Text(
+                '🤖 AI 營養分析',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple[800],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.purple[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.purple[200]!),
+                ),
+                child: Text(
+                  geminiReply,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // ✅ 顯示飲食建議
+            if (dietAdvice.isNotEmpty) ...[
+              Text(
+                '💡 飲食建議',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange[800],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Text(
+                  dietAdvice,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
           ],
         ),
       ),
