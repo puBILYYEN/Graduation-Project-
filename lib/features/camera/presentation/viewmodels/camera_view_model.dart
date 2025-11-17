@@ -209,7 +209,15 @@ class CameraViewModel extends ChangeNotifier {
     try {
       // 先初始化 CameraService 以獲取可用相機列表
       debugPrint('   [ViewModel] 初始化 CameraService...');
-      await _cameraService.initializeCameras();
+
+      // 添加整體超時保護
+      await _cameraService.initializeCameras().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          debugPrint('   ❌ [ViewModel] CameraService 初始化超時');
+          throw Exception('CameraService 初始化超時');
+        },
+      );
 
       // 再設置相機列表
       _cameras = _cameraService.cameras;
@@ -229,6 +237,7 @@ class CameraViewModel extends ChangeNotifier {
       debugPrint('   ❌ [ViewModel] 相機初始化失敗: $e');
       _isInitialized = false;
       if (mounted) notifyListeners();
+      rethrow; // 重新拋出異常，讓上層處理
     } finally {
       _setLoading(false);
     }

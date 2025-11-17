@@ -11,18 +11,26 @@ class CameraService {
   /// 初始化相機，獲取所有可用的相機設備
   Future<void> initializeCameras() async {
     try {
-      // 獲取所有可用的相機設備
-      cameras = await availableCameras();
-      print('找到 ${cameras.length} 個相機設備');
+      print('[CameraService] 開始獲取可用相機列表...');
+      // 添加超時保護，避免卡住
+      cameras = await availableCameras().timeout(
+        const Duration(seconds: 3),
+        onTimeout: () {
+          print('[CameraService] ❌ 獲取相機列表超時 (3秒)');
+          throw Exception('獲取相機列表超時');
+        },
+      );
+      print('[CameraService] ✅ 找到 ${cameras.length} 個相機設備');
 
       // 列出所有可用相機的詳細信息
       for (int i = 0; i < cameras.length; i++) {
-        print('相機 $i: ${cameras[i].name} - ${cameras[i].lensDirection}');
+        print('[CameraService] 相機 $i: ${cameras[i].name} - ${cameras[i].lensDirection}');
       }
     } catch (e) {
       // 如果相機初始化失敗，記錄錯誤但不中斷應用程式運行
-      print('相機初始化失敗: $e');
+      print('[CameraService] ❌ 相機初始化失敗: $e');
       cameras = []; // 設置為空列表，應用程式仍可運行但無相機功能
+      rethrow; // 重新拋出異常，讓上層處理
     }
   }
 

@@ -96,21 +96,30 @@ class _CameraScreenState extends State<CameraScreen>
     try {
       print('[CAMERA DEBUG] 開始初始化相機...');
 
-      // 添加超時保護，最多等待 10 秒
+      // 添加超時保護，最多等待 15 秒（考慮到所有內部超時）
       await _viewModel.initialize().timeout(
-        const Duration(seconds: 10),
+        const Duration(seconds: 15),
         onTimeout: () {
-          throw Exception('相機初始化超時（超過10秒）');
+          print('[CAMERA DEBUG] ERROR: 整體初始化超時（15秒）');
+          throw Exception('相機初始化超時（超過15秒）\n\n可能原因：\n1. 相機權限未授予\n2. 相機被其他應用程式佔用\n3. 設備相機硬體故障');
         },
       );
 
       print('[CAMERA DEBUG] 相機初始化完成');
+
+      // 確認初始化狀態
+      if (!_viewModel.isInitialized) {
+        throw Exception('相機初始化狀態異常');
+      }
+
     } catch (e) {
       print('[CAMERA DEBUG] ERROR: 相機初始化錯誤: $e');
-      setState(() {
-        _hasError = true;
-        _errorMessage = '相機初始化失敗: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          _errorMessage = '相機初始化失敗: $e';
+        });
+      }
     }
   }
 
