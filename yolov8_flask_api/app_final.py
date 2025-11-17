@@ -41,7 +41,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # ===== 載入 YOLO 模型和類別 =====
 logger.info("正在載入 YOLO 模型...")
-MODEL_PATH = os.getenv('YOLO_MODEL_PATH', '初試v2.pt')
+MODEL_PATH = os.getenv('YOLO_MODEL_PATH', 'a11171200.pt')
 CLASSES_PATH = os.getenv('YOLO_CLASSES_PATH', 'classes.txt')
 
 try:
