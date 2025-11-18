@@ -71,19 +71,22 @@
         │   (按優先順序嘗試)                       │
         └────────────────────────────────────────┘
                                  │
-        ┌────────────────────────┴────────────────────────┐
-        │                        │                        │
-        ▼                        ▼                        ▼
-┌──────────────┐      ┌──────────────┐        ┌──────────────┐
-│ Gemini API   │      │ LM Studio    │        │ OpenAI API   │
-│ (優先)        │      │ (備援 1)      │        │ (備援 2)      │
-│              │      │              │        │              │
-│ 模型:        │      │ 模型:        │        │ 模型:        │
-│ gemini-2.0-  │      │ gemma-3-4b   │        │ gpt-4o-mini  │
-│ flash-exp    │      │ -it          │        │              │
-└──────────────┘      └──────────────┘        └──────────────┘
-        │                        │                        │
-        └────────────────────────┴────────────────────────┘
+                ┌────────────────┴────────────────┐
+                │                                 │
+                ▼                                 ▼
+    ┌─────────────────────────┐     ┌─────────────────────────┐
+    │ Gemini API (優先)        │     │ LM Studio (備援)         │
+    │                         │     │                         │
+    │ 模型:                    │     │ 模型:                    │
+    │ gemini-2.0-flash-exp    │     │ gemma-3-4b-it           │
+    │                         │     │                         │
+    │ 特性:                    │     │ 特性:                    │
+    │ - 雲端 API              │     │ - 本地運行               │
+    │ - 最新實驗性模型         │     │ - 快速回應               │
+    │ - 支援繁體中文           │     │ - 無 API 成本            │
+    └─────────────────────────┘     └─────────────────────────┘
+                │                                 │
+                └────────────────┬────────────────┘
                                  │
                                  ▼
         ┌────────────────────────────────────────┐
@@ -273,34 +276,23 @@ result = self.llm_manager.generate_with_translation(
    - 最多重試 2 次
    ```
 
-2. **LM Studio** (備援 1)
+2. **LM Studio** (備援)
    ```python
    Provider: LM_STUDIO
-   Model: gemma-3-4b-it
+   Model: gemma-3-4b-it (Google Gemma 3, 4B 參數，指令微調版)
    Base URL: http://127.0.0.1:1234
 
    特性:
-   - 本地運行
+   - 本地運行（無需網路）
    - 快速回應
    - 無 API 成本
    - 60 秒超時
-   ```
-
-3. **OpenAI API** (備援 2)
-   ```python
-   Provider: OPENAI
-   Model: gpt-4o-mini
-   API Key: OPENAI_API_KEY (環境變數)
-
-   特性:
-   - 穩定可靠
-   - 高品質回答
-   - 成本較高
+   - 支援對話和指令遵循
    ```
 
 **備援邏輯**:
 ```python
-for provider in [gemini, lm_studio, openai]:
+for provider in [gemini, lm_studio]:
     if provider.is_available():
         result = provider.generate_content(prompt)
         if result:
@@ -403,16 +395,8 @@ if not query_docs or len(query_docs) == 0:
         │
         ├─ 成功 ✅ → 返回結果
         │
-        ├─ 失敗 ❌
-        │   ↓
-        │   logger.warning("LM Studio 失敗，切換到備援...")
-        │   ↓
-        └─→ 嘗試 OpenAI API
-            │
-            ├─ 成功 ✅ → 返回結果
-            │
-            └─ 失敗 ❌ → 返回錯誤
-                "所有 LLM 服務都不可用"
+        └─ 失敗 ❌ → 返回錯誤
+            "所有 LLM 服務都不可用"
 ```
 
 ### 失敗處理
@@ -600,8 +584,8 @@ query = "什麼是生酮飲食？"
 - 自動判斷 RAG vs Fallback 模式
 
 ✅ **多層備援**
-- 3 個 LLM 提供者備援
-- 2 個翻譯器備援
+- 2 個 LLM 提供者備援（Gemini → LM Studio）
+- 2 個翻譯器備援（Google Translate → Gemini）
 
 ✅ **容錯機制**
 - 自動重試
