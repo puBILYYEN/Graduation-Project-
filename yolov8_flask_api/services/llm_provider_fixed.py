@@ -84,66 +84,66 @@ class GeminiProvider(BaseLLMProvider):
 
         return False
 
-def generate_content(self, prompt: str, **kwargs) -> Optional[str]:
-      """使用 Gemini 生成內容（支援 retry 和 timeout）"""
-      if not self.is_available:
-          logger.warning("Gemini API 不可用")
-          return None
+    def generate_content(self, prompt: str, **kwargs) -> Optional[str]:
+        """使用 Gemini 生成內容（支援 retry 和 timeout）"""
+        if not self.is_available:
+            logger.warning("Gemini API 不可用")
+            return None
 
-      temperature = kwargs.get('temperature', 0.7)
-      max_tokens = kwargs.get('max_tokens', 2048)
-      max_retries = kwargs.get('max_retries', 2)
-      retry_delay = kwargs.get('retry_delay', 2)
+        temperature = kwargs.get('temperature', 0.7)
+        max_tokens = kwargs.get('max_tokens', 2048)
+        max_retries = kwargs.get('max_retries', 2)
+        retry_delay = kwargs.get('retry_delay', 2)
 
-      # Gemini API 使用 generation_config
-      generation_config = {
-          'temperature': temperature,
-          'max_output_tokens': max_tokens,
-      }
+        # Gemini API 使用 generation_config
+        generation_config = {
+            'temperature': temperature,
+            'max_output_tokens': max_tokens,
+        }
 
-      # 安全設定（gemini-2.0-flash-exp 實驗性模型需要明確設定）
-      safety_settings = [
-          {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-          {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-          {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-          {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-      ]
+        # 安全設定（gemini-2.0-flash-exp 實驗性模型需要明確設定）
+        safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ]
 
-      # 重試機制
-      for attempt in range(max_retries + 1):
-          try:
-              start_time = time.time()
+        # 重試機制
+        for attempt in range(max_retries + 1):
+            try:
+                start_time = time.time()
 
-              # 設定 request_options 來控制超時（30 秒取代原本 60 秒）
-              request_options = {"timeout": 30}
+                # 設定 request_options 來控制超時（30 秒取代原本 60 秒）
+                request_options = {"timeout": 30}
 
-              response = self.model.generate_content(
-                  prompt,
-                  generation_config=generation_config,
-                  safety_settings=safety_settings,
-                  request_options=request_options
-              )
+                response = self.model.generate_content(
+                    prompt,
+                    generation_config=generation_config,
+                    safety_settings=safety_settings,
+                    request_options=request_options
+                )
 
-              elapsed_time = time.time() - start_time
-              logger.info(f"✅ Gemini 回應成功 (耗時: {elapsed_time:.2f}s, 嘗試: {attempt + 1}/{max_retries + 1})")
-              return response.text
+                elapsed_time = time.time() - start_time
+                logger.info(f"✅ Gemini 回應成功 (耗時: {elapsed_time:.2f}s, 嘗試: {attempt + 1}/{max_retries + 1})")
+                return response.text
 
-          except Exception as e:
-              error_msg = str(e)
-              self._last_error = error_msg
+            except Exception as e:
+                error_msg = str(e)
+                self._last_error = error_msg
 
-              # 如果是最後一次嘗試，記錄錯誤並標記為不可用
-              if attempt == max_retries:
-                  logger.error(f"❌ Gemini API 調用失敗 (已重試 {max_retries} 次): {error_msg}")
-                  self.is_available = False  # 標記為不可用
-                  return None
+                # 如果是最後一次嘗試，記錄錯誤並標記為不可用
+                if attempt == max_retries:
+                    logger.error(f"❌ Gemini API 調用失敗 (已重試 {max_retries} 次): {error_msg}")
+                    self.is_available = False  # 標記為不可用
+                    return None
 
-              # 否則等待後重試
-              logger.warning(f"⚠️ Gemini API 調用失敗 (嘗試 {attempt + 1}/{max_retries + 1}): {error_msg}")
-              logger.info(f"🔄 等待 {retry_delay} 秒後重試...")
-              time.sleep(retry_delay)
+                # 否則等待後重試
+                logger.warning(f"⚠️ Gemini API 調用失敗 (嘗試 {attempt + 1}/{max_retries + 1}): {error_msg}")
+                logger.info(f"🔄 等待 {retry_delay} 秒後重試...")
+                time.sleep(retry_delay)
 
-      return None
+        return None
 
 
 class LMStudioProvider(BaseLLMProvider):
