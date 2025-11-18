@@ -1,0 +1,82 @@
+===================================================================
+GCS 向量資料庫整合補丁
+需要對 app_final.py 進行的修改
+===================================================================
+
+修改 1：在 import 區域新增 GCS manager（約第 20-26 行）
+-------------------------------------------------------------------
+找到：
+from utils.logger import logger
+from services.firebase_service import firebase_service
+from services.rag_service_chroma import rag_service_chroma
+from services.nutrition_data_manager import nutrition_manager
+from services.llm_provider import get_llm_manager
+
+改為：
+from utils.logger import logger
+from services.firebase_service import firebase_service
+from services.rag_service_chroma import rag_service_chroma
+from services.nutrition_data_manager import nutrition_manager
+from services.llm_provider import get_llm_manager
+from services.gcs_vector_store import gcs_manager
+
+
+修改 2：在 initialize_services() 函數中新增 GCS 下載邏輯（約第 76-96 行）
+-------------------------------------------------------------------
+找到：
+    # 1. 載入營養資料庫
+    if nutrition_manager.load_nutrition_database():
+        logger.info(f"✓ 營養資料庫載入成功")
+
+        # 2. 初始化 Chroma 向量資料庫
+        if rag_service_chroma.is_available():
+            # 嘗試載入現有向量資料庫
+            if not rag_service_chroma.load_vector_store():
+                # 如果不存在，從營養資料建立
+                logger.info("從營養資料建立 Chroma 向量資料庫...")
+                nutrition_data = nutrition_manager.get_all_data_for_vector_store()
+
+                if nutrition_data:
+                    rag_service_chroma.build_vector_store(nutrition_data)
+                    logger.info(f"✓ Chroma 向量資料庫建立成功")
+                else:
+                    logger.warning("! 沒有營養資料，使用空向量資料庫")
+            else:
+                logger.info(f"✓ Chroma 向量資料庫載入成功")
+        else:
+            logger.warning("! RAG 服務無法使用")
+
+改為：
+    # 1. 載入營養資料庫
+    if nutrition_manager.load_nutrition_database():
+        logger.info(f"✓ 營養資料庫載入成功")
+
+        # 2. 初始化 Chroma 向量資料庫
+        if rag_service_chroma.is_available():
+            # 2.1 檢查本地是否有向量資料庫，沒有則從 GCS 下載
+            if not os.path.exists("knowledge-base/chroma.sqlite3"):
+                logger.info("本地無向量資料庫，嘗試從 GCS 下載...")
+                if gcs_manager.vector_store_exists_in_gcs():
+                    gcs_manager.download_vector_store()
+                else:
+                    logger.info("GCS 中也沒有向量資料庫")
+
+            # 2.2 嘗試載入現有向量資料庫
+            if not rag_service_chroma.load_vector_store():
+                # 如果不存在，從營養資料建立
+                logger.info("從營養資料建立 Chroma 向量資料庫...")
+                nutrition_data = nutrition_manager.get_all_data_for_vector_store()
+
+                if nutrition_data:
+                    rag_service_chroma.build_vector_store(nutrition_data)
+                    logger.info(f"✓ Chroma 向量資料庫建立成功")
+                else:
+                    logger.warning("! 沒有營養資料，使用空向量資料庫")
+            else:
+                logger.info(f"✓ Chroma 向量資料庫載入成功")
+        else:
+            logger.warning("! RAG 服務無法使用")
+
+
+修改完成後，請儲存檔案。
+===================================================================

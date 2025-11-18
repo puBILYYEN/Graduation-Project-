@@ -23,7 +23,7 @@ from services.firebase_service import firebase_service
 from services.rag_service_chroma import rag_service_chroma
 from services.nutrition_data_manager import nutrition_manager
 from services.llm_provider import get_llm_manager
-
+from services.gcs_vector_store import gcs_manager
 # ===== Flask 應用初始化 =====
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -79,7 +79,14 @@ def initialize_services():
 
         # 2. 初始化 Chroma 向量資料庫
         if rag_service_chroma.is_available():
-            # 嘗試載入現有向量資料庫
+            # 2.1 檢查本地是否有向量資料庫，沒有則從 GCS 下載
+            if not os.path.exists("knowledge-base/chroma.sqlite3"):
+                logger.info("本地無向量資料庫，嘗試從 GCS 下載...")
+                if gcs_manager.vector_store_exists_in_gcs():
+                    gcs_manager.download_vector_store()
+                else:
+                    logger.info("GCS 中也沒有向量資料庫")
+            # 2.2 嘗試載入現有向量資料庫
             if not rag_service_chroma.load_vector_store():
                 # 如果不存在，從營養資料建立
                 logger.info("從營養資料建立 Chroma 向量資料庫...")
