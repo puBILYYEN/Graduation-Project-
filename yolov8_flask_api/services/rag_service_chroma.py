@@ -258,11 +258,28 @@ class RAGServiceChroma:
             # 1. 相似度搜尋
             query_docs = self.similarity_search(query, k)
 
-            if not query_docs:
-                return "抱歉！我無法在知識庫中找到相關資訊來回答您的問題。"
+            # 2. 根據是否找到文檔，選擇不同的提示詞
+            if not query_docs or len(query_docs) == 0:
+                # 找不到相關文檔，使用 Gemini 自身知識庫回答
+                logger.info(f"向量資料庫中找不到相關資訊，使用 LLM 自身知識庫回答: {query}")
 
-            # 2. 準備提示詞（參考 notebook）
-            prompt_text = """你是一位專業的營養師，你的目標是幫助使用者了解營養知識並提供健康的飲食建議。
+                fallback_prompt = """你是一位專業的營養師，你的目標是幫助使用者了解營養知識並提供健康的飲食建議。
+
+你需要使用專業且友善的語氣，並以清晰易懂的方式解釋營養相關問題。
+
+請使用你的專業知識回答以下問題。如果問題超出營養學範疇，請禮貌地說明並建議相關的專業資源。
+
+回答下列問題：
+{question}"""
+
+                final_prompt = fallback_prompt.format(question=query)
+
+            else:
+                # 找到相關文檔，使用 RAG 模式
+                logger.info(f"在向量資料庫中找到 {len(query_docs)} 個相關文檔")
+
+                # 準備提示詞（參考 notebook）
+                prompt_text = """你是一位專業的營養師，你的目標是幫助使用者了解營養知識並提供健康的飲食建議。
 
 你需要使用專業且友善的語氣，並以清晰易懂的方式解釋營養相關問題。
 
@@ -277,14 +294,14 @@ class RAGServiceChroma:
 回答下列問題：
 {question}"""
 
-            # 3. 組合文檔內容
-            documents_text = "\n\n".join([doc.page_content for doc in query_docs])
+                # 組合文檔內容
+                documents_text = "\n\n".join([doc.page_content for doc in query_docs])
 
-            # 4. 生成最終提示
-            final_prompt = prompt_text.format(
-                documents=documents_text,
-                question=query
-            )
+                # 生成最終提示
+                final_prompt = prompt_text.format(
+                    documents=documents_text,
+                    question=query
+                )
 
             # 5. 使用 LLM Manager 生成回答（支援自動備援和翻譯）
             result = self.llm_manager.generate_with_translation(
