@@ -32,7 +32,13 @@
       "Bash(Select-String -Pattern \"ERROR|Exception|Failed|Error\" -Context 2,2)",
       "Bash(Select-Object -First 20)",
       "Bash(flutter clean:*)",
-      "Bash(git fsck:*)"
+      "Bash(git fsck:*)",
+      "Bash(python check_database_size.py:*)",
+      "Bash(cat:*)",
+      "Bash(python rebuild_chroma_from_csv.py:*)",
+      "Bash(python:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

@@ -99,3 +99,10 @@ ignore/
 temp/
 tmp/
 backup/
+
+# ===== 向量資料庫保護 =====
+# 備份目錄（本地備份，不上傳到 Git）
+knowledge-base-backups/
+
+# 注意：knowledge-base/ 本身要上傳到 Git 做版本控制
+# 所以不要加入 gitignore！
