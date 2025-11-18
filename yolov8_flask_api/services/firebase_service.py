@@ -38,7 +38,7 @@ class FirebaseService:
                 if os.path.exists(cred_path):
                     cred = credentials.Certificate(cred_path)
                     firebase_admin.initialize_app(cred, {
-                        'storageBucket': 'your-project-id.appspot.com'  # 替換為你的專案 ID
+                        'storageBucket': 'fooddata-92fa8.appspot.com'
                     })
                     logger.info("Firebase Admin SDK 初始化成功")
                 else:

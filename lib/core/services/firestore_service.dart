@@ -295,7 +295,15 @@ class FirestoreService {
       final data = doc.data() as Map<String, dynamic>;
 
       // 客戶端日期過濾：只處理今日的記錄
-      final timestamp = data['timestamp'] as int?;
+      final timestampField = data['timestamp'];
+      int? timestamp;
+
+      if (timestampField is Timestamp) {
+        timestamp = timestampField.millisecondsSinceEpoch;
+      } else if (timestampField is int) {
+        timestamp = timestampField;
+      }
+
       if (timestamp == null || timestamp < startOfDay || timestamp > endOfDay) {
         continue; // 跳過不是今天的記錄
       }
