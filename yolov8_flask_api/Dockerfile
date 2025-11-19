@@ -41,11 +41,14 @@ RUN python download_models.py
 ENV TRANSFORMERS_OFFLINE=1 \
     HF_HUB_OFFLINE=1
 
+# 複製向量資料庫 (重要！加速啟動)
+COPY knowledge-base /app/knowledge-base/
+
 # 複製應用程式代碼和資源
 COPY . .
 
 # 創建必要的目錄
-RUN mkdir -p static logs knowledge-base
+RUN mkdir -p static logs
 
 # 暴露端口（Cloud Run 會動態分配，但我們預設 8080）
 EXPOSE 8080
@@ -56,4 +59,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 
 # 啟動應用程式
 # Cloud Run 會設定 PORT 環境變數，我們需要使用它
-CMD exec gunicorn --worker-class eventlet -w 1 --bind :$PORT --timeout 0 app_final:app
+# 使用 gevent worker（用於 Socket.IO polling 模式）
+CMD exec gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 0 --preload app_final:app

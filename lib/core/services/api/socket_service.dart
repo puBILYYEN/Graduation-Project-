@@ -43,7 +43,7 @@
         _socket = IO.io(
           ApiEndpoints.baseUrl,
           IO.OptionBuilder()
-              .setTransports(['websocket', 'polling'])  // 3.x 版本應優先使用 websocket
+              .setTransports(['polling'])  // Cloud Run 僅支援 polling 模式
               .disableAutoConnect()
               .setTimeout(60000)  // 60秒超時以應對 Cloud Run 冷啟動
               .setReconnectionAttempts(5)

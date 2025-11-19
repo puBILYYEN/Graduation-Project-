@@ -30,7 +30,7 @@ requests==2.31.0
 python-dotenv==1.0.0
 numpy==1.26.3
 
-# WebSocket 支援
+# Socket.IO 支援（polling 模式）
 python-socketio==5.11.1
-eventlet==0.35.1
+gevent==24.2.1
 gunicorn==21.2.0 

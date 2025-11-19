@@ -33,7 +33,19 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # 啟用 Socket.IO
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+# Cloud Run 使用 threading 模式，僅支援 polling（不支援 WebSocket）
+# WebSocket 在 Cloud Run 上會因為 HTTP/2 代理而失敗
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode='threading',
+    logger=True,
+    engineio_logger=True,
+    ping_timeout=60,
+    ping_interval=25,
+    allow_upgrades=False,  # Cloud Run 不支援 WebSocket 升級
+    transports=['polling']  # 僅使用 polling 模式
+)
 
 # ===== 設置上傳資料夾 =====
 UPLOAD_FOLDER = 'static'
@@ -78,27 +90,21 @@ def initialize_services():
         logger.info(f"✓ 營養資料庫載入成功")
 
         # 2. 初始化 Chroma 向量資料庫
+        # 2. 初始化 Chroma 向量資料庫
         if rag_service_chroma.is_available():
-            # 2.1 檢查本地是否有向量資料庫，沒有則從 GCS 下載
-            if not os.path.exists("knowledge-base/chroma.sqlite3"):
-                logger.info("本地無向量資料庫，嘗試從 GCS 下載...")
-                if gcs_manager.vector_store_exists_in_gcs():
-                    gcs_manager.download_vector_store()
-                else:
-                    logger.info("GCS 中也沒有向量資料庫")
-            # 2.2 嘗試載入現有向量資料庫
+            # 直接嘗試載入本地向量資料庫 (已打包在 Docker 映像中)
             if not rag_service_chroma.load_vector_store():
-                # 如果不存在，從營養資料建立
-                logger.info("從營養資料建立 Chroma 向量資料庫...")
+                # 如果本地不存在或載入失敗，才從營養資料重建
+                logger.warning("本地向量資料庫載入失敗或不存在，將從頭建立...")
                 nutrition_data = nutrition_manager.get_all_data_for_vector_store()
 
                 if nutrition_data:
                     rag_service_chroma.build_vector_store(nutrition_data)
-                    logger.info(f"✓ Chroma 向量資料庫建立成功")
+                    logger.info("✓ Chroma 向量資料庫建立成功")
                 else:
-                    logger.warning("! 沒有營養資料，使用空向量資料庫")
+                    logger.warning("! 沒有營養資料，無法建立向量資料庫")
             else:
-                logger.info(f"✓ Chroma 向量資料庫載入成功")
+                logger.info("✓ Chroma 向量資料庫載入成功")
         else:
             logger.warning("! RAG 服務無法使用")
 
